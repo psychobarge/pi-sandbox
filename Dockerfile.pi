@@ -1,0 +1,27 @@
+# node:24-trixie (glibc 2.41) — rtk's aarch64 Linux build requires glibc >= 2.39 (bookworm has 2.36)
+FROM node:24-trixie-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash ca-certificates curl git ripgrep \
+  && rm -rf /var/lib/apt/lists/*
+
+# rtk — Rust Token Killer (compresses bash output for the agent).
+# Pin to a release; bump deliberately. x86_64 ships musl (static), aarch64 ships gnu.
+ARG RTK_VERSION=v0.44.2
+RUN case "$(uname -m)" in \
+       x86_64)  TARGET=x86_64-unknown-linux-musl ;; \
+       aarch64) TARGET=aarch64-unknown-linux-gnu ;; \
+       *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;; \
+     esac \
+  && curl -fsSL -o /tmp/rtk.tar.gz \
+     "https://github.com/rtk-ai/rtk/releases/download/${RTK_VERSION}/rtk-${TARGET}.tar.gz" \
+  && tar -xzf /tmp/rtk.tar.gz -C /tmp \
+  && install -m 0755 /tmp/rtk /usr/local/bin/rtk \
+  && rm -rf /tmp/rtk.tar.gz /tmp/rtk \
+  && rtk --version
+
+# pi — pinned; update-pi-sandbox.sh bumps this and rebuilds the image.
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.84.2
+
+WORKDIR /workspace
+ENTRYPOINT ["pi"]
