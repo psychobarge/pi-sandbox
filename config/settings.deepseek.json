@@ -1,0 +1,33 @@
+{
+  "theme": "dark",
+  "defaultProvider": "deepseek",
+  "defaultModel": "deepseek-v4-flash",
+  "enabledModels": [
+    "deepseek/deepseek-v4-flash"
+  ],
+  "defaultThinkingLevel": "high",
+  "enableInstallTelemetry": false,
+  "hideThinkingBlock": false,
+  "providers": {
+    "deepseek": {
+      "modelOverrides": {
+        "deepseek-v4-pro": {
+          "thinkingLevelMap": {
+            "low": "low"
+          }
+        }
+      }
+    }
+  },
+  "compaction": {
+    "enabled": false
+  },
+  "packages": [
+    "git:github.com/DietrichGebert/ponytail",
+    "npm:pi-web-access",
+    "git:github.com/psychobarge/pi-deepseek-peak",
+    "npm:@narumitw/pi-plan-mode",
+    "npm:pi-ask-mode"
+  ],
+  "lastChangelogVersion": "0.84.2"
+}

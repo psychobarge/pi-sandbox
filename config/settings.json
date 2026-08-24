@@ -1,0 +1,16 @@
+{
+  "theme": "dark",
+  "defaultThinkingLevel": "high",
+  "enableInstallTelemetry": false,
+  "hideThinkingBlock": false,
+  "compaction": {
+    "enabled": false
+  },
+  "packages": [
+    "git:github.com/DietrichGebert/ponytail",
+    "npm:pi-web-access",
+    "npm:@narumitw/pi-plan-mode",
+    "npm:pi-ask-mode"
+  ],
+  "lastChangelogVersion": "0.84.2"
+}
