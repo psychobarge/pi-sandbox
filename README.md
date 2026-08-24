@@ -7,7 +7,7 @@
 
 ## Requirements
 
-- [OrbStack](https://orbstack.dev) (includes the Docker engine):
+Any Docker engine works (OrbStack or Docker Desktop):
 
   ```bash
   open -a OrbStack
@@ -137,7 +137,7 @@ Manual:
 
 | Problem | Fix |
 |---------|-----|
-| `failed to connect to the docker API ... orbstack` | `open -a OrbStack`, retry |
+| `failed to connect to the docker API ... orbstack` | Open OrbStack / Docker Desktop, retry |
 | `⚠ folder not found: ...` | Fix the path in `ALLOWED` |
 | Pi doesn't see a folder | Check `ALLOWED` and relaunch after the edit |
 | No API key found | Define the variable in your shell before `./pi.sh` |

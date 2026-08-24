@@ -79,8 +79,8 @@ fi
 
 # Make sure Docker is up (start OrbStack if needed)
 if ! docker version --format '{{.Server.Version}}' >/dev/null 2>&1; then
-  echo "→ Docker is not responding, starting OrbStack…"
-  open -a OrbStack 2>/dev/null || true
+  echo "→ Docker is not responding, starting OrbStack / Docker Desktop…"
+  open -a OrbStack 2>/dev/null || open -a "Docker Desktop" 2>/dev/null || true
   for _ in {1..10}; do
     sleep 2
     docker version --format '{{.Server.Version}}' >/dev/null 2>&1 && break
