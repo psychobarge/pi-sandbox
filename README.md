@@ -5,6 +5,11 @@
 > folders you list** and the Internet — never your home dir, `~/.ssh` or host
 > `~/.pi/agent`.
 
+**Everything after `./install.sh` is automatic:** each `pi` launch checks for
+new pi releases and rebuilds the image in the background if needed, config and
+extensions persist across launches, and rtk compresses bash output — no manual
+steps, just run `pi`.
+
 ## Requirements
 
 Any Docker engine works (OrbStack or Docker Desktop):
