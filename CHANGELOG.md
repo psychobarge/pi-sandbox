@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.1] — 2026-08-24
+
+### Changed
+- `pi.sh` mounts the confined folder at its real host path instead of
+  `/workspace`, so pi's footer shows the actual folder (e.g.
+  `~/pi-sandbox (main)`) instead of a generic `workspace`.
+
+### Updated
+- pi bumped to `0.84.3` in `Dockerfile.pi` (auto-update via
+  `update-pi-sandbox.sh`).
+
 ## [0.1.0] — 2026-08-24
 
 Initial release: isolated pi sandbox under OrbStack (macOS).

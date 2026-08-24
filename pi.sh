@@ -49,9 +49,11 @@ done
 
 if [ -n "$START_DIR" ]; then
   echo "→ Confined to: $START_DIR"
-  ARGS=(-v "$START_DIR:$WORKSPACE")
-  [ -n "$START_REL" ] && WORKDIR_ARGS=(-w "$WORKSPACE/$START_REL") \
-                     || WORKDIR_ARGS=(-w "$WORKSPACE")
+  # Mount at the folder's real host path so pi's footer shows the actual
+  # location (e.g. ~/My_workspace/My_projects/pi-sandbox (main)), not a generic /workspace.
+  ARGS=(-v "$START_DIR:$START_DIR")
+  [ -n "$START_REL" ] && WORKDIR_ARGS=(-w "$START_DIR/$START_REL") \
+                     || WORKDIR_ARGS=(-w "$START_DIR")
 else
   echo "⚠ $LAUNCH_DIR is not in ALLOWED (pi.conf)"
   printf "Add this folder to ALLOWED and launch confined to it? [y/N] "

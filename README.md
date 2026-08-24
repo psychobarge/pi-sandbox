@@ -40,7 +40,7 @@ Any Docker engine works (OrbStack or Docker Desktop):
 What it does:
 
 1. Checks Docker and starts OrbStack if needed.
-2. Builds the pi image (Node 24, pi pinned at `0.84.2` — see `Dockerfile.pi`).
+2. Builds the pi image (Node 24, pi pinned at `0.84.3` — see `Dockerfile.pi`).
 3. Installs the model config into the `pi-agent-home` volume (no default
    provider; thinking level `high`).
 4. Installs the predefined extensions (ponytail, pi-web-access,
@@ -86,13 +86,15 @@ DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)   # e.g. add --network none to cut the 
 pi             # from anywhere (installed by install.sh)
 ```
 
-- **Inside an allowed folder** → the container mounts only that folder at
-  `/workspace` and pi starts there (works from subdirectories).
+- **Inside an allowed folder** → the container mounts only that folder at its
+  real path and pi starts there (works from subdirectories). The footer shows
+  the actual location, e.g. `~/pi-sandbox (main)`, not a
+  generic `workspace`.
 - **Elsewhere** → pi asks whether to add the current folder to `ALLOWED`;
   answer `y` to whitelist it and relaunch confined to it, or `n` to mount all
   allowed folders under `/workspace/<name>`.
 
-Inside the session: `!ls /workspace` runs shell commands, `/reload` hot-loads
+Inside the session: `!pwd` shows where you are (the real host path), `/reload` hot-loads
 newly added extensions.
 
 ### Adding / removing an allowed folder
