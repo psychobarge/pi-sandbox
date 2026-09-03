@@ -27,7 +27,8 @@ Any Docker engine works (OrbStack or Docker Desktop):
 | `install.sh` | One-time setup: image, config, extensions, launcher |
 | `pi.sh` | Launches the container (reads `pi.conf`, checks for updates) |
 | `update-pi-sandbox.sh` | Checks pi.dev for a newer pi, rebuilds the image |
-| `pi.conf` | All configuration: allowed folders, API keys, docker options |
+| `pi.conf.example` | Configuration template (allowed folders, API keys, docker options) |
+| `pi.conf` | Your **local, gitignored** config — copy the example and fill it in |
 | `config/settings.json` | Model defaults (no provider by default — pi asks on first run) |
 | `config/settings.deepseek.json` | DeepSeek model defaults (installed only if you opt in) |
 
@@ -61,7 +62,15 @@ resets the volume config. It does **not** update pi — updates happen at launch
 
 ## Configuration
 
-Everything lives in `pi.conf`:
+Configuration is a **local** file, never committed:
+
+```bash
+cp pi.conf.example pi.conf   # then edit pi.conf
+```
+
+`pi.sh` creates `pi.conf` from the example automatically on first run if it is
+missing. `pi.conf` is gitignored because it holds your personal folder paths
+and API keys — keep private paths out of git. It looks like:
 
 ```bash
 ALLOWED=(                     # folders the container may see
