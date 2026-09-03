@@ -25,6 +25,9 @@ log_error() {
   echo "[$(date '+%F %T')] $*" >> "logs/usage-$(date +%F).log"
 }
 
+# pi.conf is gitignored (it holds your personal paths); auto-create it from the
+# example on first run so `source` below never fails on a fresh clone.
+[ -f ./pi.conf ] || { cp ./pi.conf.example ./pi.conf; echo "✓ pi.conf created from pi.conf.example — edit it to set your folders"; }
 source ./pi.conf
 
 # Are we inside an allowed folder? If so, confine to it.

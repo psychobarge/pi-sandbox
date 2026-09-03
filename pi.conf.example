@@ -1,0 +1,35 @@
+# ====== pi configuration example (edit this file) ======
+# THIS FILE IS A TEMPLATE. Copy it to `pi.conf` (gitignored) and fill in your
+# own folders/keys — never commit your real pi.conf.
+#   cp pi.conf.example pi.conf
+# pi.sh auto-creates pi.conf from this example on first run if it is missing.
+
+# Allowed folders: the container sees ONLY these.
+# - Launched from inside one → confined to that folder, mounted at its real
+#   path (pi's footer shows the actual location).
+# - Launched elsewhere and answering "n" → all mounted under $WORKSPACE/<name>.
+ALLOWED=(
+  "$HOME/<your-project-path>"                       # e.g. ~/my-project
+  "$HOME/pi-sandbox"                # this repo, so launching from here confines to it
+)
+
+# Environment variables forwarded to the container (API keys, etc.)
+# Only those defined in your shell are passed.
+API_KEYS=(
+  TAVILY_API_KEY
+  OPENAI_API_KEY
+  DEEPSEEK_API_KEY
+)
+
+# Image and volume (volume = sessions/config/extensions, persists across launches)
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+# rtk data (history / `rtk gain` stats) — named volume, same isolation as VOLUME
+RTK_VOLUME="rtk-data"
+# Container-side mount point for the NON-confined fallback only
+# (confined launches mount the folder at its real host path).
+WORKSPACE="/workspace"
+
+# Extra docker arguments (e.g. --network none to cut Internet access)
+# PI_SKIP_VERSION_CHECK: updates are owned by update-pi-sandbox.sh on the host
+DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)
