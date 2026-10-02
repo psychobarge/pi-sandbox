@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased] — 2026-10-02
+
+### Updated
+- pi bumped to `1.0.0` in `Dockerfile.pi` (auto-update via
+  `update-pi-sandbox.sh`).
+- DeepSeek model defaults moved to the ids the built-in pi provider actually
+  serves (`deepseek-flash`); `deepseek-v4-flash` is retired upstream.
+
+### Added
+- `pi.sh` bind-mounts `config/models.json` at launch. It now holds only the
+  `deepseek-v4-pro` `low` thinking-level override, which pi's catalog still
+  lacks. The duplicated `deepseek-flash` model entry was dropped: it replaced
+  the built-in entry and silently lost `compat.supportsStrictMode`.
+- `defaultTools: ["+grep", "+find", "+ls"]` in both settings files.
+
+### Removed
+- `hideThinkingBlock` (pi's default) and `lastChangelogVersion` (pi-managed)
+  from the settings templates.
+
 ## [0.1.1] — 2026-08-24
 
 ### Changed

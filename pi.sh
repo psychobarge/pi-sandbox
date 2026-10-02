@@ -50,6 +50,13 @@ for k in "${API_KEYS[@]}"; do
   [ -n "${!k:-}" ] && ENV_ARGS+=(-e "$k")
 done
 
+# Models live in ~/.pi/agent/models.json (user-level, pi reads nothing else),
+# so the repo's config/models.json is bind-mounted over the volume at launch:
+# edit it and relaunch — no reinstall, no drift between repo and volume.
+MODELS_ARGS=()
+MODELS_FILE="$(dirname "$SCRIPT")/config/models.json"
+[ -f "$MODELS_FILE" ] && MODELS_ARGS=(-v "$MODELS_FILE:/root/.pi/agent/models.json")
+
 if [ -n "$START_DIR" ]; then
   echo "→ Confined to: $START_DIR"
   # Mount at the folder's real host path so pi's footer shows the actual
@@ -115,6 +122,7 @@ code=0
 docker run --rm -it \
   ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} \
   -v "${VOLUME}:/root/.pi/agent" \
+  ${MODELS_ARGS[@]+"${MODELS_ARGS[@]}"} \
   -v "${RTK_VOLUME}:/root/.local/share/rtk" \
   "${ARGS[@]}" \
   "${WORKDIR_ARGS[@]}" \
