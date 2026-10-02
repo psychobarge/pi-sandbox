@@ -31,6 +31,7 @@ Any Docker engine works (OrbStack or Docker Desktop):
 | `pi.conf` | Your **local, gitignored** config — copy the example and fill it in |
 | `config/settings.json` | Model defaults (no provider by default — pi asks on first run) |
 | `config/settings.deepseek.json` | DeepSeek model defaults (installed only if you opt in) |
+| `config/models.json` | Per-model overrides (DeepSeek V4 Pro `low` thinking; mounted at every launch) |
 
 ## Install
 
@@ -41,7 +42,7 @@ Any Docker engine works (OrbStack or Docker Desktop):
 What it does:
 
 1. Checks Docker and starts OrbStack if needed.
-2. Builds the pi image (Node 24, pi pinned at `0.84.3` — see `Dockerfile.pi`).
+2. Builds the pi image (Node 24, pi pinned at `1.0.0` — see `Dockerfile.pi`).
 3. Installs the model config into the `pi-agent-home` volume (no default
    provider; thinking level `high`).
 4. Installs the predefined extensions (ponytail, pi-web-access,

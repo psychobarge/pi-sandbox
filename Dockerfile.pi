@@ -21,7 +21,7 @@ RUN case "$(uname -m)" in \
   && rtk --version
 
 # pi — pinned; update-pi-sandbox.sh bumps this and rebuilds the image.
-RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.84.3
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.0.0
 
 WORKDIR /workspace
 ENTRYPOINT ["pi"]
