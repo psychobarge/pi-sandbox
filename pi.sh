@@ -119,9 +119,12 @@ else
 fi
 
 code=0
+# Tool caches stay in the volume: the container is ephemeral, so without this
+# anything cached would be re-downloaded on every launch.
 docker run --rm -it \
   ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} \
   -v "${VOLUME}:/root/.pi/agent" \
+  -e XDG_CACHE_HOME=/root/.pi/agent/cache \
   ${MODELS_ARGS[@]+"${MODELS_ARGS[@]}"} \
   -v "${RTK_VOLUME}:/root/.local/share/rtk" \
   "${ARGS[@]}" \

@@ -12,11 +12,10 @@
     "enabled": false
   },
   "packages": [
-    "git:github.com/DietrichGebert/ponytail",
+    "npm:@dietrichgebert/ponytail",
     "npm:pi-web-access",
-    "git:github.com/psychobarge/pi-deepseek-peak",
+    "npm:pi-deepseek-peak",
     "npm:@narumitw/pi-plan-mode",
-    "npm:pi-ask-mode",
-    "npm:pi-memory"
+    "npm:pi-ask-mode"
   ]
 }

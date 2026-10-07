@@ -87,7 +87,8 @@ DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)   # e.g. add --network none to cut the 
 
 > ⚠️ Host `~/.pi/agent` is **never mounted**: pi sessions, config and
 > extensions live in the `pi-agent-home` named volume; rtk history in
-> `rtk-data`. Both are isolated from the host.
+> `rtk-data`. Both are isolated from the host. Tool caches (`XDG_CACHE_HOME`)
+> live in the volume too, so they survive across launches.
 
 ## Usage
 

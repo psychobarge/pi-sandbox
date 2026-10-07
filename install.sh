@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 # ====== Extensions to install ======
 EXTENSIONS=(
-  "git:github.com/DietrichGebert/ponytail"
+  "npm:@dietrichgebert/ponytail"
   "npm:pi-web-access"
   "npm:@narumitw/pi-plan-mode"
   "npm:pi-ask-mode"
@@ -76,7 +76,7 @@ read -r want_deepseek || true
 case "$want_deepseek" in
   y|Y|yes|YES)
     echo "→ Installing pi-deepseek-peak…"
-    docker run --rm -v pi-agent-home:/root/.pi/agent pi-sandbox install "git:github.com/psychobarge/pi-deepseek-peak"
+    docker run --rm -v pi-agent-home:/root/.pi/agent pi-sandbox install "npm:pi-deepseek-peak"
     echo "→ Installing deepseek model config…"
     docker run --rm \
       -v pi-agent-home:/root/.pi/agent \
