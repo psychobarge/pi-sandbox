@@ -2,15 +2,20 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased] — 2026-10-02
+## [0.1.2] — 2026-10-02
 
 ### Updated
-- pi bumped to `1.0.0` in `Dockerfile.pi` (auto-update via
+- pi bumped to `1.0.4` in `Dockerfile.pi` (auto-update via
   `update-pi-sandbox.sh`).
 - DeepSeek model defaults moved to the ids the built-in pi provider actually
   serves (`deepseek-flash`); `deepseek-v4-flash` is retired upstream.
+- `ponytail` and `pi-deepseek-peak` now install from npm
+  (`npm:@dietrichgebert/ponytail`, `npm:pi-deepseek-peak`) instead of their
+  git URLs, in `install.sh` and both `config/settings*.json`.
 
 ### Added
+- `pi.sh` sets `XDG_CACHE_HOME` into the `pi-agent-home` volume: tool caches
+  would otherwise be re-downloaded on every launch (ephemeral container).
 - `pi.sh` bind-mounts `config/models.json` at launch. It now holds only the
   `deepseek-v4-pro` `low` thinking-level override, which pi's catalog still
   lacks. The duplicated `deepseek-flash` model entry was dropped: it replaced

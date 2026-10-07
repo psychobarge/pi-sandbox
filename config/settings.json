@@ -7,10 +7,9 @@
     "enabled": false
   },
   "packages": [
-    "git:github.com/DietrichGebert/ponytail",
+    "npm:@dietrichgebert/ponytail",
     "npm:pi-web-access",
     "npm:@narumitw/pi-plan-mode",
-    "npm:pi-ask-mode",
-    "npm:pi-memory"
+    "npm:pi-ask-mode"
   ]
 }
