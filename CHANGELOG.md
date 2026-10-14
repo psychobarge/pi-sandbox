@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.1] — 2026-10-14
+
+### Added
+- Python 3.13 in the image (`python3`, `python`, `pip`, `venv` from Debian
+  trixie) — for the agent's throwaway helper scripts, not for running a
+  project's dependencies.
+
+> The image is **not** rebuilt automatically for this: `update-pi-sandbox.sh`
+> only rebuilds when a newer pi release exists. Run
+> `docker build -t pi-sandbox -f Dockerfile.pi .` (or `./install.sh`) once.
+
 ## [0.2.0] - 2026-10-14
 
 ### Changed

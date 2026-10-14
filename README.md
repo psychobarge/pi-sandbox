@@ -23,7 +23,7 @@ Any Docker engine works (OrbStack or Docker Desktop):
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile.pi` | Image: Node 24 + pi + git + ripgrep + rtk |
+| `Dockerfile.pi` | Image: Node 24 + pi + git + ripgrep + rtk + Python 3.13 (pip, venv) |
 | `install.sh` | One-time setup: image, config, extensions, launcher |
 | `pi.sh` | Launches the container (reads `pi.conf`, checks for updates) |
 | `update-pi-sandbox.sh` | Checks pi.dev for a newer pi, rebuilds the image |
