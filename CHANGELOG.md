@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.0] - 2026-10-14
+
+### Changed
+- **Breaking**: API keys no longer live in `~/.zshrc`. `pi.sh` reads them from
+  the macOS Keychain (service `pi-sandbox`, account = variable name, e.g.
+  `-a TAVILY_API_KEY`) and forwards them to the container. A variable already
+  exported in the shell still wins (one-off override); on a machine without
+  `security` only the shell env is used, as before.
+  Migration from items created as `-s deepseek-api-key -a "$USER"`:
+  `security add-generic-password -U -s pi-sandbox -a DEEPSEEK_API_KEY -w "$(security find-generic-password -s deepseek-api-key -a "$USER" -w)"`
+  (same for `TAVILY_API_KEY`/`tavily-api-key`), then delete the old items and
+  the `export` lines in `~/.zshrc`.
+- `install.sh` stores the keys in the Keychain with a hidden prompt instead of
+  printing `export` lines for the shell rc (nothing in the history, nothing in
+  `ps`, no file on disk).
+
 ## [0.1.2] — 2026-10-02
 
 ### Updated

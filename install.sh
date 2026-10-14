@@ -94,32 +94,45 @@ case "$want_deepseek" in
     ;;
 esac
 
-# ====== 7. API keys (all optional) ======
-RC_FILE="$HOME/.zshrc"
-case "$SHELL" in
-  *bash*) RC_FILE="$HOME/.bashrc" ;;
-esac
+# ====== 7. API keys → macOS Keychain (never in ~/.zshrc) ======
+# pi.sh reads them from the login keychain at launch (service "pi-sandbox",
+# account = variable name), so no secret ever lands in a shell rc file.
+KEYCHAIN_SERVICE="pi-sandbox"
+store_key() {
+  local name="$1" answer=""
+  if security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$name" -w >/dev/null 2>&1; then
+    echo "  ✓ $name already in the Keychain"
+    return 0
+  fi
+  if [ -t 0 ]; then
+    printf "  Store %s in the Keychain now? [y/N] " "$name"
+    read -r answer || true
+  fi
+  case "$answer" in
+    y|Y|yes|YES)
+      # -w last: security prompts for the value (hidden input), so it never
+      # reaches argv, the shell history, or a file.
+      security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$name" -w ;;
+    *)
+      echo "  ℹ  later: security add-generic-password -U -s $KEYCHAIN_SERVICE -a $name -w" ;;
+  esac
+}
 
 echo
 echo "════════════════════════════════════════════════════════════════"
-echo "  API KEYS — add them to your shell ($RC_FILE)"
+echo "  API KEYS — stored in your macOS Keychain (login keychain)"
 echo "════════════════════════════════════════════════════════════════"
-if [ -n "${DEEPSEEK_OPTED:-}" ]; then
-  echo "DeepSeek (required to use the deepseek model):"
-  echo
-  echo "  echo 'export DEEPSEEK_API_KEY=\"sk-…\"' >> $RC_FILE"
-  echo
-fi
-echo "Tavily (optional — web search for pi-web-access):"
+store_key TAVILY_API_KEY
+[ -n "${DEEPSEEK_OPTED:-}" ] && store_key DEEPSEEK_API_KEY
 echo
-echo "  echo 'export TAVILY_API_KEY=\"tvly-…\"' >> $RC_FILE"
-echo
-echo "Then reload your shell:  source $RC_FILE"
-echo
+echo "pi.sh forwards them to the container automatically at launch."
+echo "macOS may ask \"security wants to use…\" on first read: click Always Allow."
+echo "Remove any 'export …_API_KEY=' line left in ~/.zshrc."
 echo "════════════════════════════════════════════════════════════════"
 
-if [ -n "${DEEPSEEK_OPTED:-}" ] && [ -z "${DEEPSEEK_API_KEY:-}" ]; then
-  echo "ℹ️  DEEPSEEK_API_KEY not detected in this shell."
+if [ -n "${DEEPSEEK_OPTED:-}" ] \
+   && ! security find-generic-password -s "$KEYCHAIN_SERVICE" -a DEEPSEEK_API_KEY -w >/dev/null 2>&1; then
+  echo "ℹ️  DEEPSEEK_API_KEY not in the Keychain (the deepseek model won't authenticate)."
 fi
 
 # ====== 8. Launcher in PATH ======
@@ -142,7 +155,7 @@ fi
 
 echo
 echo "To get started:"
-echo "  1. Edit pi.conf (allowed folders, API keys):  nano pi.conf"
+echo "  1. Edit pi.conf (allowed folders):  nano pi.conf"
 echo "  2. cd into one of the allowed folders, then:  pi"
 
 # ====== Retention: keep 30 days ======

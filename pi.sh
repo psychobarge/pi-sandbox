@@ -44,10 +44,18 @@ for dir in "${ALLOWED[@]}"; do
   esac
 done
 
-# API keys / env vars to forward (only those defined in your shell)
+# API keys / env vars to forward. Source of truth: the macOS Keychain
+# (service "pi-sandbox", account = variable name). A variable already set in the
+# shell wins, so you can still override one key for a single launch.
+KEYCHAIN_SERVICE="pi-sandbox"
 ENV_ARGS=()
 for k in "${API_KEYS[@]}"; do
-  [ -n "${!k:-}" ] && ENV_ARGS+=(-e "$k")
+  v="${!k:-}"
+  if [ -z "$v" ] && command -v security >/dev/null 2>&1; then
+    v="$(security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$k" -w 2>/dev/null)" || v=""
+  fi
+  # export + -e NAME (not NAME=value) keeps the secret out of docker's argv / `ps`
+  [ -n "$v" ] && export "$k=$v" && ENV_ARGS+=(-e "$k")
 done
 
 # Models live in ~/.pi/agent/models.json (user-level, pi reads nothing else),

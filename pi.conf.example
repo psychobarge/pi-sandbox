@@ -14,7 +14,8 @@ ALLOWED=(
 )
 
 # Environment variables forwarded to the container (API keys, etc.)
-# Only those defined in your shell are passed.
+# Resolved in this order: variable defined in your shell, else macOS Keychain
+# (service "pi-sandbox", account = variable name). Nothing to export in ~/.zshrc.
 API_KEYS=(
   TAVILY_API_KEY
   OPENAI_API_KEY

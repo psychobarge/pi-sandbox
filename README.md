@@ -53,8 +53,9 @@ What it does:
 6. Asks whether you want DeepSeek: `y` installs the `pi-deepseek-peak`
    extension, restores the deepseek model defaults and adds
    `DEEPSEEK_API_KEY` to `API_KEYS`.
-7. Prints the `~/.zshrc`/`~/.bashrc` lines for the API keys
-   (`TAVILY_API_KEY` is always optional).
+7. Offers to store the API keys in the macOS Keychain (hidden input — nothing
+   in your shell history, nothing in `~/.zshrc`). `TAVILY_API_KEY` is always
+   optional.
 8. Installs the `pi` launcher into `/usr/local/bin`.
 
 Re-running `install.sh` rebuilds the image with the **same pinned version** and
@@ -70,14 +71,14 @@ cp pi.conf.example pi.conf   # then edit pi.conf
 ```
 
 `pi.sh` creates `pi.conf` from the example automatically on first run if it is
-missing. `pi.conf` is gitignored because it holds your personal folder paths
-and API keys — keep private paths out of git. It looks like:
+missing. `pi.conf` is gitignored because it holds your personal folder paths —
+keep private paths out of git. It looks like:
 
 ```bash
 ALLOWED=(                     # folders the container may see
   "$HOME/Workspace/projects/project_1"
 )
-API_KEYS=(TAVILY_API_KEY OPENAI_API_KEY)   # forwarded if defined in your shell
+API_KEYS=(TAVILY_API_KEY OPENAI_API_KEY)   # shell env, else macOS Keychain (service pi-sandbox)
 IMAGE="pi-sandbox"
 VOLUME="pi-agent-home"        # sessions, config, extensions (persists)
 RTK_VOLUME="rtk-data"         # rtk history
@@ -89,6 +90,25 @@ DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)   # e.g. add --network none to cut the 
 > extensions live in the `pi-agent-home` named volume; rtk history in
 > `rtk-data`. Both are isolated from the host. Tool caches (`XDG_CACHE_HOME`)
 > live in the volume too, so they survive across launches.
+
+### API keys (macOS Keychain)
+
+Keys are **not** exported in `~/.zshrc`: `pi.sh` reads them from the login
+keychain and passes them to the container. The service is always `pi-sandbox`,
+the account is the variable name:
+
+```bash
+security add-generic-password -U -s pi-sandbox -a TAVILY_API_KEY -w   # hidden prompt
+security add-generic-password -U -s pi-sandbox -a OPENAI_API_KEY -w
+security find-generic-password -s pi-sandbox -a TAVILY_API_KEY -w     # check
+security delete-generic-password -s pi-sandbox -a TAVILY_API_KEY      # remove
+```
+
+`-w` last makes `security` prompt for the value (hidden input), so it never
+appears in your shell history or in a process list. A key already exported in
+the shell wins over the Keychain, which lets you override one key for a single
+launch. In *Keychain Access* both items share the `pi-sandbox` label — the
+account column tells them apart.
 
 ## Usage
 
@@ -158,4 +178,4 @@ Manual:
 | `failed to connect to the docker API ... orbstack` | Open OrbStack / Docker Desktop, retry |
 | `⚠ folder not found: ...` | Fix the path in `ALLOWED` |
 | Pi doesn't see a folder | Check `ALLOWED` and relaunch after the edit |
-| No API key found | Define the variable in your shell before `./pi.sh` |
+| Key ignored / provider not authenticated | Check `security find-generic-password -s pi-sandbox -a <KEY> -w`; if macOS re-asks for permission on every launch, click *Always Allow* or recreate the item |
