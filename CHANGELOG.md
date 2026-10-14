@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.2] — 2026-10-14
+
+### Updated
+- **rtk** bumped `0.44.2` → `1.0.0` in `Dockerfile.pi`. Default edition kept
+  (Apache-2.0 + BUSL-1.1, compression engine included; `rtk-oss` is the engine-less
+  Apache-2.0 build). Asset names and the history path
+  (`~/.local/share/rtk/history.db`) are unchanged.
+- `update-pi-sandbox.sh` now follows pi **and** rtk: it compares the versions
+  baked into the image against pi.dev and the latest rtk GitHub release, bumps
+  the matching pin and rebuilds once. After an rtk bump it also re-installs the
+  pi hook (`rtk init -g --agent pi --auto-patch`) — the extension file is an
+  rtk-generated template and changed in 1.0.0.
+- `pi.sh` announces the update with the pi/rtk label instead of pi only.
+
+> Migration: run `./update-pi-sandbox.sh` once (rebuild + hook refresh), or
+> `./install.sh`. A bare `docker build` refreshes the binary but not the hook.
+
+> Upstream breaking changes with no impact on this repo: `rtk proxy` is now
+> `rtk bypass` (old name kept as an alias), `--ultra-compact` removed, `rtk gain`
+> excludes oversized outputs from its headline rate. Neither flag/command is
+> used here.
+
 ## [0.2.1] — 2026-10-14
 
 ### Added

@@ -109,15 +109,14 @@ fi
 docker version --format '{{.Server.Version}}' >/dev/null 2>&1 \
   || { log_error "Docker is not responding"; echo "❌ Docker is not responding. Open OrbStack then retry."; exit 1; }
 
-# Auto-update: rebuild the image in background if a newer pi release exists.
+# Auto-update: rebuild the image in background if a newer pi or rtk release exists.
 # The container is ephemeral (docker run --rm), so the update must happen here.
 UPDATER="$(dirname "$SCRIPT")/update-pi-sandbox.sh"
 if docker image inspect "${IMAGE}" >/dev/null 2>&1; then
   STATUS="$("$UPDATER" --status 2>/dev/null)" || STATUS="up-to-date"
   case "$STATUS" in
     stale:*)
-      LATEST="${STATUS#stale:}"
-      echo "→ Nouvelle version de pi (v${LATEST}) disponible — mise à jour en arrière-plan, redémarre pi pour l'utiliser."
+      echo "→ Mise à jour disponible (${STATUS#stale:}) — récupération en arrière-plan, redémarre pi pour l'utiliser."
       nohup "$UPDATER" >> "logs/update-$(date +%F).log" 2>&1 &
       ;;
   esac

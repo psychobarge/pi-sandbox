@@ -7,8 +7,10 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # rtk — Rust Token Killer (compresses bash output for the agent).
-# Pin to a release; bump deliberately. x86_64 ships musl (static), aarch64 ships gnu.
-ARG RTK_VERSION=v0.44.2
+# Pin to a release; update-pi-sandbox.sh bumps this and rebuilds the image.
+# Default edition (Apache-2.0 + BUSL-1.1): it keeps the compression engine that
+# rtk-oss drops. x86_64 ships musl (static), aarch64 ships gnu.
+ARG RTK_VERSION=v1.0.0
 RUN case "$(uname -m)" in \
        x86_64)  TARGET=x86_64-unknown-linux-musl ;; \
        aarch64) TARGET=aarch64-unknown-linux-gnu ;; \
