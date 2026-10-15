@@ -8,16 +8,7 @@ set -euo pipefail
 PI_LATEST_URL="https://pi.dev/api/latest-version"
 RTK_LATEST_URL="https://api.github.com/repos/rtk-ai/rtk/releases/latest"
 
-# Resolve script dir, symlink-aware (same block as pi.sh)
-SCRIPT="${BASH_SOURCE[0]:-$0}"
-while [ -L "$SCRIPT" ]; do
-  TARGET="$(readlink "$SCRIPT")"
-  case "$TARGET" in
-    /*) SCRIPT="$TARGET" ;;
-    *) SCRIPT="$(dirname "$SCRIPT")/$TARGET" ;;
-  esac
-done
-cd "$(dirname "$SCRIPT")"
+cd "$(dirname "$0")"
 DIR="$(pwd)"
 LOCK="${PI_UPDATE_LOCK:-/tmp/pi-sandbox-update.lock}"
 
