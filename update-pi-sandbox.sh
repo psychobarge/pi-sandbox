@@ -29,8 +29,9 @@ pi_latest_version() {
 # pre-releases. Empty on any failure (offline, GitHub rate limit) → the callers
 # treat that as "up-to-date" and never block a launch.
 # (GitHub's JSON is pretty-printed, hence the [:space:]* after the colon.)
+# NOTE: \{0,1\}, not \? — macOS ships BSD sed, where \? is a literal '?'.
 rtk_latest_version() {
-  curl -fsS --max-time 5 "$RTK_LATEST_URL" | sed -n 's/.*"tag_name":[[:space:]]*"v\?\([^"]*\)".*/\1/p'
+  curl -fsS --max-time 5 "$RTK_LATEST_URL" | sed -n 's/.*"tag_name":[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p'
 }
 
 # Versions actually baked into the image (not the pins) — source of truth.

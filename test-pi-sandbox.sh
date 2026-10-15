@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Hand-run checks for the risky host-side logic: the updater lock and the
-# pi.conf edit in install.sh. No Docker, no network, no repo writes.
+# Hand-run checks for the risky host-side logic: the updater lock, the pi.conf
+# edit in install.sh, the version comparison and the ALLOWED path matching.
+# No Docker, no network, no repo writes.
 #   ./test-pi-sandbox.sh   (exits non-zero if anything fails)
 set -uo pipefail
 cd "$(dirname "$0")"
@@ -154,6 +155,90 @@ CONF2="$TMP/conf2"; mkdir -p "$CONF2"; cp "$SRC/pi.conf.example" "$CONF2/pi.conf
 check "missing pi.conf: awk fails" test "$awk_status" -ne 0
 check "missing pi.conf: no output written" test ! -s "$TMP/out"
 check "missing pi.conf: no file created" test "$(ls -A "$CONF2")" = "pi.conf.example"
+
+# ===== version comparison (update-pi-sandbox.sh --status) ==================
+# The updater must rebuild exactly when a release differs from the version
+# baked into the image, and stay quiet when curl fails (offline / rate limit).
+VS="$TMP/vs"; mkdir -p "$VS"; cp "$SRC/update-pi-sandbox.sh" "$VS/"
+VSSTUB="$TMP/vsstub"; mkdir -p "$VSSTUB"
+cat > "$VSSTUB/docker" <<'STUB'
+#!/bin/sh
+case "$*" in
+  *"version --format"*) exit 0 ;;
+  *entrypoint*rtk*) printf 'rtk %s\n' "${STUB_RTK_IMAGE:-1.0.0}" ;;
+  *"--version"*) printf '%s\n' "${STUB_PI_IMAGE:-1.2.0}" ;;
+esac
+exit 0
+STUB
+cat > "$VSSTUB/curl" <<'STUB'
+#!/bin/sh
+case "$*" in
+  *github*)
+    [ -n "${STUB_RTK_LATEST:-}" ] || exit 22
+    printf '{\n  "tag_name": "v%s"\n}\n' "$STUB_RTK_LATEST" ;;
+  *)
+    [ -n "${STUB_PI_LATEST:-}" ] || exit 22
+    printf '{"version":"%s"}\n' "$STUB_PI_LATEST" ;;
+esac
+STUB
+chmod +x "$VSSTUB/docker" "$VSSTUB/curl"
+status_case() {  # pi_image pi_latest rtk_image rtk_latest
+  PATH="$VSSTUB:$PATH" STUB_PI_IMAGE="$1" STUB_PI_LATEST="$2" \
+    STUB_RTK_IMAGE="$3" STUB_RTK_LATEST="$4" "$VS/update-pi-sandbox.sh" --status
+}
+check "status: same versions -> up-to-date" \
+  test "$(status_case 1.2.0 1.2.0 1.0.0 1.0.0)" = "up-to-date"
+check "status: new pi -> stale pi" \
+  test "$(status_case 1.2.0 1.3.0 1.0.0 1.0.0)" = "stale:pi v1.3.0"
+check "status: new rtk -> stale rtk" \
+  test "$(status_case 1.2.0 1.2.0 1.0.0 1.1.0)" = "stale:rtk v1.1.0"
+check "status: both new -> both named" \
+  test "$(status_case 1.2.0 1.3.0 1.0.0 1.1.0)" = "stale:pi v1.3.0 + rtk v1.1.0"
+# network down / GitHub rate limit: an empty latest version must never be
+# treated as a difference, or every launch would rebuild.
+check "status: curl fails -> up-to-date (never blocks a launch)" \
+  test "$(status_case 1.2.0 '' 1.0.0 '')" = "up-to-date"
+DOCKER_DOWN="$TMP/dockerdown"; mkdir -p "$DOCKER_DOWN"
+printf '#!/bin/sh\nexit 1\n' > "$DOCKER_DOWN/docker"; chmod +x "$DOCKER_DOWN/docker"
+check "status: docker down -> up-to-date (never blocks a launch)" \
+  test "$(PATH="$DOCKER_DOWN:$PATH" "$VS/update-pi-sandbox.sh" --status)" = "up-to-date"
+# macOS ships BSD sed, where `\?` and `\+` in a basic regex are literals, not
+# GNU repetition — that silently broke rtk_latest_version.
+check "no GNU-only \\?/\\+ escapes in sed expressions (BSD sed)" \
+  bash -c '[ -z "$(grep -nE "$1" "$2" | grep -v ":[[:space:]]*#")" ]' \
+  _ 'sed[^|]*\\[?+]' "$SRC/update-pi-sandbox.sh"
+
+# ===== ALLOWED path matching (pi.sh) =======================================
+# Confinement matches the launch dir against ALLOWED: a folder inside an
+# allowed path is confined to it, a sibling sharing the prefix (`proj` vs
+# `proj-extra`) is not.
+P3="$TMP/pi3"; mkdir -p "$P3/run" "$P3/allowed/proj/sub" "$P3/allowed/proj-extra"
+cp "$SRC/pi.sh" "$P3/"
+cat > "$P3/pi.conf" <<EOF
+ALLOWED=("$P3/allowed/proj")
+API_KEYS=()
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+RTK_VOLUME="rtk-data"
+WORKSPACE="/workspace"
+DOCKER_ARGS=()
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$P3/update-pi-sandbox.sh"; chmod +x "$P3/update-pi-sandbox.sh"
+run_pi3() { ( cd "$1" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P3/pi.sh" ) >"$2" 2>&1; }
+: > "$TMP/docker.args"
+run_pi3 "$P3/allowed/proj/sub" "$TMP/pi3-confined.out"
+check "inside an allowed folder: confined to it" \
+  grep -qF "Confined to: $P3/allowed/proj" "$TMP/pi3-confined.out"
+check "inside an allowed folder: mounted at its host path" \
+  bash -c 'grep -qxF "$1" "$2"' _ "$P3/allowed/proj:$P3/allowed/proj" "$TMP/docker.args"
+check "inside an allowed folder: workdir is the subfolder" \
+  bash -c '[ "$(grep -A 1 -x -F -- "-w" "$1" | tail -1)" = "$2" ]' _ "$TMP/docker.args" "$P3/allowed/proj/sub"
+: > "$TMP/docker.args"
+run_pi3 "$P3/allowed/proj-extra" "$TMP/pi3-sibling.out"
+check "sibling sharing the prefix is not confined" \
+  grep -qF "not in ALLOWED" "$TMP/pi3-sibling.out"
+check "sibling: allowed folders still mounted" \
+  bash -c 'grep -qxF "$1" "$2"' _ "$P3/allowed/proj:/workspace/proj" "$TMP/docker.args"
 
 echo
 echo "$PASS passed, $FAIL failed"
