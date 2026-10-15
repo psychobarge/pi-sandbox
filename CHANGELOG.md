@@ -5,6 +5,9 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- `config/models.json` is now bind-mounted read-only: a session could edit the
+  repo's file on the host (provider, base URL) even when the repo was not in
+  `ALLOWED`.
 - Answering `y` to "Add this folder to ALLOWED" in a folder whose path contains
   `"`, `$`, a backtick or `\` is now refused: the path was written unescaped
   into the sourced `pi.conf`, so a folder named `x$(cmd)` ran `cmd` on the host

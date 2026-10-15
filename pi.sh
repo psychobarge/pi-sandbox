@@ -70,7 +70,7 @@ done
 # edit it and relaunch — no reinstall, no drift between repo and volume.
 MODELS_ARGS=()
 MODELS_FILE="$(dirname "$SCRIPT")/config/models.json"
-[ -f "$MODELS_FILE" ] && MODELS_ARGS=(-v "$MODELS_FILE:/root/.pi/agent/models.json")
+[ -f "$MODELS_FILE" ] && MODELS_ARGS=(-v "$MODELS_FILE:/root/.pi/agent/models.json:ro")
 
 if [ -n "$START_DIR" ]; then
   echo "→ Confined to: $START_DIR"

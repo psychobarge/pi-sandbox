@@ -398,6 +398,15 @@ cp "$P6/pi.conf" "$TMP/pi6.conf.orig"
 check "unsafe launch path: refused" grep -q 'add it to pi.conf by hand' "$TMP/pi6.out"
 check "unsafe launch path: pi.conf unchanged" cmp -s "$P6/pi.conf" "$TMP/pi6.conf.orig"
 
+# ===== models.json mount (pi.sh) ===========================================
+# Without :ro any session could edit the repo's models.json on the host, even
+# when the repo is not in ALLOWED.
+mkdir -p "$P3/config"; echo '{}' > "$P3/config/models.json"
+: > "$TMP/docker.args"
+run_pi3 "$P3/allowed/proj" "$TMP/pi3-models.out"
+check "models.json is mounted read-only" \
+  grep -qx "$P3/config/models.json:/root/.pi/agent/models.json:ro" "$TMP/docker.args"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
