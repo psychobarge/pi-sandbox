@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Fixed
+- Answering `y` to the DeepSeek question on a re-run no longer overwrites
+  `settings.json`: `install.sh` merges the DeepSeek defaults into it instead of
+  copying the file over, so extensions added with `!pi install` survive
+  (`config/merge-deepseek-settings.py`).
+
 ## [1.0.0] — 2026-10-15
 
 First stable release. Covers everything since 0.1.1; the intermediate 0.1.2,

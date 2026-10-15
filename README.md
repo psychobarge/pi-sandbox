@@ -31,6 +31,7 @@ Any Docker engine works (OrbStack or Docker Desktop):
 | `pi.conf` | Your **local, gitignored** config — copy the example and fill it in |
 | `config/settings.json` | Model defaults (no provider by default — pi asks on first run) |
 | `config/settings.deepseek.json` | DeepSeek model defaults (installed only if you opt in) |
+| `config/merge-deepseek-settings.py` | Merges those defaults into `settings.json` without dropping your extensions |
 | `config/models.json` | Per-model overrides (DeepSeek V4 Pro `low` thinking; mounted at every launch) |
 
 ## Install

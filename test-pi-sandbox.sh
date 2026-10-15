@@ -158,6 +158,42 @@ check "missing pi.conf: awk fails" test "$awk_status" -ne 0
 check "missing pi.conf: no output written" test ! -s "$TMP/out"
 check "missing pi.conf: no file created" test "$(ls -A "$CONF2")" = "pi.conf.example"
 
+# ===== DeepSeek settings merge (config/merge-deepseek-settings.py) =========
+# Answering yes to DeepSeek must not drop extensions the user installed with
+# `!pi install` (the audit's finding 2: `cp -f` wiped them).
+if command -v python3 >/dev/null 2>&1; then
+  MERGE="$SRC/config/merge-deepseek-settings.py"
+  DS="$SRC/config/settings.deepseek.json"
+  M="$TMP/merge"; mkdir -p "$M"
+  cat > "$M/settings.json" <<'EOF'
+{
+  "theme": "light",
+  "packages": [
+    "npm:@dietrichgebert/ponytail",
+    "npm:mon-ext-perso"
+  ]
+}
+EOF
+  python3 "$MERGE" "$M/settings.json" "$DS" >/dev/null 2>&1
+  check "merge: user's own package kept" \
+    grep -q 'npm:mon-ext-perso' "$M/settings.json"
+  check "merge: existing package not duplicated" \
+    test "$(grep -c 'npm:@dietrichgebert/ponytail' "$M/settings.json")" = 1
+  check "merge: pi-deepseek-peak added" \
+    grep -q 'npm:pi-deepseek-peak' "$M/settings.json"
+  check "merge: deepseek provider set" \
+    grep -q '"defaultProvider": "deepseek"' "$M/settings.json"
+  check "merge: user's own keys kept" grep -q '"theme": "light"' "$M/settings.json"
+  check "merge: valid json" \
+    python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$M/settings.json"
+  M2="$TMP/merge-empty"; mkdir -p "$M2"
+  python3 "$MERGE" "$M2/settings.json" "$DS" >/dev/null 2>&1
+  check "merge: works with no settings.json (fresh volume)" \
+    grep -q 'npm:pi-deepseek-peak' "$M2/settings.json"
+else
+  echo "SKIP DeepSeek merge cases (no python3 on this machine)"
+fi
+
 # ===== version comparison (update-pi-sandbox.sh --status) ==================
 # The updater must rebuild exactly when a release differs from the version
 # baked into the image, and stay quiet when curl fails (offline / rate limit).

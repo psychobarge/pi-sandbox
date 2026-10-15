@@ -71,11 +71,13 @@ read -r want_deepseek || true
 case "$want_deepseek" in
   y|Y|yes|YES)
     echo "→ Installing deepseek model config (pi installs pi-deepseek-peak from it)…"
+    # Merge, never overwrite: re-running must not wipe packages the user
+    # installed with `!pi install` (they live in this same settings.json).
     docker run --rm \
       -v pi-agent-home:/root/.pi/agent \
       -v "$(pwd)/config:/config:ro" \
-      --entrypoint bash pi-sandbox -c \
-      'cp -f /config/settings.deepseek.json /root/.pi/agent/settings.json && echo "✓ DeepSeek model config installed"'
+      --entrypoint python3 pi-sandbox \
+      /config/merge-deepseek-settings.py /root/.pi/agent/settings.json /config/settings.deepseek.json
     # pi.sh creates pi.conf on first launch; install.sh may run first.
     [ -f pi.conf ] || cp pi.conf.example pi.conf
     if ! grep -q '^  DEEPSEEK_API_KEY$' pi.conf; then
