@@ -21,6 +21,13 @@ cd "$(dirname "$SCRIPT")"
 DIR="$(pwd)"
 LOCK="${PI_UPDATE_LOCK:-/tmp/pi-sandbox-update.lock}"
 
+# Image and volume names come from pi.conf — the same file pi.sh reads — so a
+# renamed IMAGE/VOLUME cannot leave the updater building one image while the
+# launcher starts another. Defaults keep a fresh clone / standalone run working.
+[ -f "$DIR/pi.conf" ] && source "$DIR/pi.conf"
+IMAGE="${IMAGE:-pi-sandbox}"
+VOLUME="${VOLUME:-pi-agent-home}"
+
 pi_latest_version() {
   curl -fsS --max-time 5 "$PI_LATEST_URL" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
 }
@@ -37,7 +44,7 @@ rtk_latest_version() {
 # Versions actually baked into the image (not the pins) — source of truth.
 # Both probes in one container start: each `docker run` costs ~0.3-1 s.
 image_versions() {
-  docker run --rm --entrypoint bash pi-sandbox -c 'pi --version; rtk --version' 2>/dev/null || true
+  docker run --rm --entrypoint bash "${IMAGE}" -c 'pi --version; rtk --version' 2>/dev/null || true
 }
 
 # pi prints a bare "1.2.0" (line 1); rtk prints "rtk x.y.z" (line 2).
@@ -120,11 +127,11 @@ rebuild() {
   # The build retags pi-sandbox, leaving the previous image untagged for good.
   # Remember its exact ID (never a global prune: other projects' images and
   # containers must not be touched) and drop it once the new build exists.
-  old_image="$(docker image inspect --format '{{.Id}}' pi-sandbox 2>/dev/null || true)"
+  old_image="$(docker image inspect --format '{{.Id}}' "${IMAGE}" 2>/dev/null || true)"
 
-  if docker build -t pi-sandbox -f Dockerfile.pi . >> "$LOG" 2>&1; then
-    echo "[$(date '+%F %T')] rebuilt pi-sandbox → $changed" >> "$LOG"
-    if [ -n "$old_image" ] && [ "$old_image" != "$(docker image inspect --format '{{.Id}}' pi-sandbox 2>/dev/null || true)" ]; then
+  if docker build -t "${IMAGE}" -f Dockerfile.pi . >> "$LOG" 2>&1; then
+    echo "[$(date '+%F %T')] rebuilt ${IMAGE} → $changed" >> "$LOG"
+    if [ -n "$old_image" ] && [ "$old_image" != "$(docker image inspect --format '{{.Id}}' "${IMAGE}" 2>/dev/null || true)" ]; then
       # Fails, harmlessly, while a session still runs on it → removed next rebuild.
       if docker image rm "$old_image" >> "$LOG" 2>&1; then
         echo "[$(date '+%F %T')] removed previous image ${old_image#sha256:}" >> "$LOG"
@@ -135,12 +142,12 @@ rebuild() {
     # The pi hook is an rtk-generated template (it changes between releases):
     # refresh it so it matches the new binary. --auto-patch: this run has no TTY.
     if [ -n "$rtk_changed" ]; then
-      docker run --rm -e RTK_TELEMETRY_DISABLED=1 -v pi-agent-home:/root/.pi/agent \
-        --entrypoint bash pi-sandbox -c 'rtk init -g --agent pi --auto-patch' >> "$LOG" 2>&1 \
+      docker run --rm -e RTK_TELEMETRY_DISABLED=1 -v "${VOLUME}:/root/.pi/agent" \
+        --entrypoint bash "${IMAGE}" -c 'rtk init -g --agent pi --auto-patch' >> "$LOG" 2>&1 \
         || echo "[$(date '+%F %T')] rtk hook refresh failed" >> "$LOG"
     fi
     if [ "$(uname -s)" = "Darwin" ]; then
-      osascript -e "display notification \"pi-sandbox updated ($changed) — restart pi to use it\" with title \"pi-sandbox update\"" 2>/dev/null || true
+      osascript -e "display notification \"${IMAGE} updated ($changed) — restart pi to use it\" with title \"pi-sandbox update\"" 2>/dev/null || true
     fi
   else
     echo "[$(date '+%F %T')] build FAILED (pi=$ip→$lp, rtk=$ir→$lr) — retry next launch" >> "$LOG"

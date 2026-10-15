@@ -15,6 +15,12 @@ All notable changes to this project are documented here.
   copying the file over, so extensions added with `!pi install` survive
   (`config/merge-deepseek-settings.py`).
 
+### Changed
+- `install.sh` and `update-pi-sandbox.sh` now read `IMAGE`, `VOLUME` and
+  `RTK_VOLUME` from `pi.conf` — the same file `pi.sh` reads — instead of
+  hardcoding `pi-sandbox`/`pi-agent-home`/`rtk-data`. Renaming them used to
+  build and populate one image/volume while the launcher started another.
+
 ## [1.0.0] — 2026-10-15
 
 First stable release. Covers everything since 0.1.1; the intermediate 0.1.2,

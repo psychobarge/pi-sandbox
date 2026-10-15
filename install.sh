@@ -4,6 +4,12 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Image and volume names come from pi.conf — the same file pi.sh reads — so a
+# renamed IMAGE/VOLUME/RTK_VOLUME cannot leave install.sh and the launcher
+# disagreeing. Created from the example on a fresh clone, like pi.sh does.
+[ -f pi.conf ] || cp pi.conf.example pi.conf
+source ./pi.conf
+
 # ====== 1. Check Docker (OrbStack or Docker Desktop) ======
 if ! command -v docker >/dev/null 2>&1; then
   echo "❌ docker not found."
@@ -24,14 +30,14 @@ docker version --format '{{.Server.Version}}' >/dev/null 2>&1 \
 echo "✓ Docker $(docker version --format '{{.Server.Version}}')"
 
 # ====== 2. Pi image (Node 24 + pi pinned; auto-updated by update-pi-sandbox.sh) ======
-echo "→ Building pi-sandbox image (Node 24 + latest pi)…"
-docker build -t pi-sandbox -f Dockerfile.pi .
+echo "→ Building ${IMAGE} image (Node 24 + latest pi)…"
+docker build -t "${IMAGE}" -f Dockerfile.pi .
 echo "✓ Image ready"
 
 # ====== 2b. rtk data volume (persists `rtk gain` history across launches) ======
-# Named volume, same isolation as pi-agent-home: survives container removal.
-docker volume create rtk-data >/dev/null 2>&1 || true
-echo "✓ rtk-data volume ready"
+# Named volume, same isolation as the pi-agent home volume: survives container removal.
+docker volume create "${RTK_VOLUME}" >/dev/null 2>&1 || true
+echo "✓ ${RTK_VOLUME} volume ready"
 
 # ====== 3. Model & thinking config (settings.json) ======
 # No default provider/model: pi asks on first run. DeepSeek is added
@@ -40,9 +46,9 @@ echo "✓ rtk-data volume ready"
 # installed with `!pi install` (they live in this same settings.json).
 echo "→ Installing model config (no default provider, pi asks on first run)…"
 docker run --rm \
-  -v pi-agent-home:/root/.pi/agent \
+  -v "${VOLUME}:/root/.pi/agent" \
   -v "$(pwd)/config:/config:ro" \
-  --entrypoint bash pi-sandbox -c \
+  --entrypoint bash "${IMAGE}" -c \
   'mkdir -p /root/.pi/agent
    if [ -f /root/.pi/agent/settings.json ]; then
      echo "✓ Model config kept (existing extensions preserved)"
@@ -58,8 +64,8 @@ docker run --rm \
 echo "→ Installing rtk pi extension (compresses bash output for the agent)…"
 docker run --rm \
   -e RTK_TELEMETRY_DISABLED=1 \
-  -v pi-agent-home:/root/.pi/agent \
-  --entrypoint bash pi-sandbox -c \
+  -v "${VOLUME}:/root/.pi/agent" \
+  --entrypoint bash "${IMAGE}" -c \
   'rtk init -g --agent pi'
 echo "✓ rtk extension installed"
 
@@ -74,12 +80,10 @@ case "$want_deepseek" in
     # Merge, never overwrite: re-running must not wipe packages the user
     # installed with `!pi install` (they live in this same settings.json).
     docker run --rm \
-      -v pi-agent-home:/root/.pi/agent \
+      -v "${VOLUME}:/root/.pi/agent" \
       -v "$(pwd)/config:/config:ro" \
-      --entrypoint python3 pi-sandbox \
+      --entrypoint python3 "${IMAGE}" \
       /config/merge-deepseek-settings.py /root/.pi/agent/settings.json /config/settings.deepseek.json
-    # pi.sh creates pi.conf on first launch; install.sh may run first.
-    [ -f pi.conf ] || cp pi.conf.example pi.conf
     if ! grep -q '^  DEEPSEEK_API_KEY$' pi.conf; then
       tmp="$(mktemp)"
       if awk -v array=API_KEYS -v entry=DEEPSEEK_API_KEY -f append-array-entry.awk pi.conf > "$tmp"; then
