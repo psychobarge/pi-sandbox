@@ -44,6 +44,7 @@ All notable changes to this project are documented here.
   had actually succeeded as failed.
 
 ### Added
+- GitHub Actions workflow running `./test-pi-sandbox.sh` on every push and PR.
 - README: a "What the sandbox does not protect" section (forwarded keys are
   readable by the agent; files it writes in an allowed repo can run on the host
   through git hooks and editor/shell tooling).
