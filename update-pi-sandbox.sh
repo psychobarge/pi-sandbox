@@ -81,7 +81,7 @@ rebuild() {
   find "$DIR/logs" -name '*.log' -mtime +30 -delete
   docker_ok || { echo "[$(date '+%F %T')] docker down, skip" >> "$LOG"; exit 0; }
 
-  local lp lr ip ir changed="" rtk_changed=""
+  local lp lr ip ir changed="" rtk_changed="" old_image=""
   lp="$(pi_latest_version || true)"; ip="$(image_pi_version)"
   lr="$(rtk_latest_version || true)"; ir="$(image_rtk_version)"
 
@@ -113,8 +113,21 @@ rebuild() {
   fi
   if [ -z "$changed" ]; then exit 0; fi
 
+  # The build retags pi-sandbox, leaving the previous image untagged for good.
+  # Remember its exact ID (never a global prune: other projects' images and
+  # containers must not be touched) and drop it once the new build exists.
+  old_image="$(docker image inspect --format '{{.Id}}' pi-sandbox 2>/dev/null || true)"
+
   if docker build -t pi-sandbox -f Dockerfile.pi . >> "$LOG" 2>&1; then
     echo "[$(date '+%F %T')] rebuilt pi-sandbox → $changed" >> "$LOG"
+    if [ -n "$old_image" ] && [ "$old_image" != "$(docker image inspect --format '{{.Id}}' pi-sandbox 2>/dev/null || true)" ]; then
+      # Fails, harmlessly, while a session still runs on it → removed next rebuild.
+      if docker image rm "$old_image" >> "$LOG" 2>&1; then
+        echo "[$(date '+%F %T')] removed previous image ${old_image#sha256:}" >> "$LOG"
+      else
+        echo "[$(date '+%F %T')] previous image in use, kept ${old_image#sha256:}" >> "$LOG"
+      fi
+    fi
     # The pi hook is an rtk-generated template (it changes between releases):
     # refresh it so it matches the new binary. --auto-patch: this run has no TTY.
     if [ -n "$rtk_changed" ]; then

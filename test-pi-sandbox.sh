@@ -65,6 +65,14 @@ else
   echo "SKIP live-lock case (no ps and no /proc on this machine)"
 fi
 
+# ===== previous-image cleanup (update-pi-sandbox.sh) =====================
+# Scoped on purpose: a global `docker image prune` would also drop other
+# projects' dangling images and is forbidden here.
+check "updater never prunes images globally" \
+  bash -c '! grep -q "image prune" "$0"' "$SRC/update-pi-sandbox.sh"
+check "updater removes the previous image by exact id" \
+  bash -c 'grep -q "docker image rm \"\$old_image\"" "$0"' "$SRC/update-pi-sandbox.sh"
+
 # ===== empty ALLOWED / API_KEYS (pi.sh) ====================================
 # macOS ships bash 3.2, where "${empty[@]}" under `set -u` is an unbound
 # variable. Run the launcher for real with both lists empty and a stubbed
