@@ -91,7 +91,7 @@ else
   echo "→ Mounting all allowed folders (add the folder to ALLOWED in pi.conf to confine)"
   ARGS=()
   for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
-    [ -d "$dir" ] || { log_error "folder not found: $dir"; echo "⚠ folder not found: $dir"; exit 1; }
+    [ -d "$dir" ] || { log_error "folder not found: $dir"; echo "⚠ folder not found: $dir"; continue; }
     ARGS+=(-v "$dir:${WORKSPACE}/$(basename "$dir")")
   done
   WORKDIR_ARGS=(-w "$WORKSPACE")
