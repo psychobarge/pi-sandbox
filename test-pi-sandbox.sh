@@ -84,6 +84,10 @@ check "Dockerfile pins both arch hashes" \
   bash -c 'grep -q "^ARG RTK_SHA256_X86_64=[0-9a-f]\{64\}$" "$1" && grep -q "^ARG RTK_SHA256_AARCH64=[0-9a-f]\{64\}$" "$1"' _ "$SRC/Dockerfile.pi"
 check "updater repins the rtk hashes on a version bump" \
   bash -c 'grep -q "checksums.txt" "$1" && grep -q "ARG RTK_SHA256_X86_64=" "$1"' _ "$SRC/update-pi-sandbox.sh"
+# GitHub serves release assets through a redirect: without -L curl exits 0 with
+# an empty body, the hashes are never found and rtk is never bumped.
+check "checksums.txt download follows redirects (-L)" \
+  bash -c 'grep -A1 "sums=.*curl" "$1" | grep -q "curl -[a-zA-Z]*L"' _ "$SRC/update-pi-sandbox.sh"
 
 # ===== empty ALLOWED / API_KEYS (pi.sh) ====================================
 # macOS ships bash 3.2, where "${empty[@]}" under `set -u` is an unbound
