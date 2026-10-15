@@ -84,15 +84,9 @@ case "$want_deepseek" in
       -v "$(pwd)/config:/config:ro" \
       --entrypoint python3 "${IMAGE}" \
       /config/merge-deepseek-settings.py /root/.pi/agent/settings.json /config/settings.deepseek.json
-    if ! grep -q '^  DEEPSEEK_API_KEY$' pi.conf; then
-      tmp="$(mktemp)"
-      if awk -v array=API_KEYS -v entry=DEEPSEEK_API_KEY -f append-array-entry.awk pi.conf > "$tmp"; then
-        mv "$tmp" pi.conf
-        echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
-      else
-        rm -f "$tmp"
-        echo "❌ Failed to add DEEPSEEK_API_KEY to pi.conf"
-      fi
+    if ! grep -q '^[^#]*DEEPSEEK_API_KEY' pi.conf; then
+      printf '\nAPI_KEYS+=(DEEPSEEK_API_KEY)   # added by install.sh\n' >> pi.conf
+      echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
     fi
     DEEPSEEK_OPTED=1
     ;;

@@ -91,10 +91,10 @@ else
       case "$LAUNCH_DIR" in
         *[\"\$\`\\]*) echo "❌ path contains \" \$ \` or \\ — add it to pi.conf by hand"; exit 1 ;;
       esac
-      # Shared paren-aware parser: a one-line list has no line starting with
-      # ")", which the old `^\)` match missed (folder looked added but wasn't).
-      awk -v array=ALLOWED -v entry="\"$LAUNCH_DIR\"" \
-        -f append-array-entry.awk pi.conf > pi.conf.tmp && mv pi.conf.tmp pi.conf
+      # Append at the end of the file: pi.conf is sourced, so ALLOWED+=() extends
+      # the list wherever it was written (one-line lists included).
+      grep -qF "\"$LAUNCH_DIR\"" pi.conf \
+        || printf '\nALLOWED+=("%s")   # added by pi.sh\n' "$LAUNCH_DIR" >> pi.conf
       echo "✓ Added to ALLOWED (pi.conf), relaunching…"
       cd "$LAUNCH_DIR"
       exec "$SCRIPT"

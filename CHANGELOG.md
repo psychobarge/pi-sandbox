@@ -32,8 +32,8 @@ All notable changes to this project are documented here.
 - A folder list or key list written on one line (`ALLOWED=("/a" "/b")`) is
   now edited correctly. The launcher used to "add" the folder without writing
   it, then relaunch in an endless prompt loop, and `install.sh` reported a key
-  it never added. Both edits go through `append-array-entry.awk`, which finds
-  the array's closing `)` by paren depth (one-line lists included).
+  it never added. Both now append `ALLOWED+=("…")` / `API_KEYS+=(…)` at the end
+  of the sourced `pi.conf`, which works whatever the list's layout.
 - Answering `y` to the DeepSeek question on a re-run no longer overwrites
   `settings.json`: `install.sh` merges the DeepSeek defaults into it instead of
   copying the file over, so extensions added with `!pi install` survive
