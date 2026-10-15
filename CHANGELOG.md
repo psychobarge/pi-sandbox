@@ -27,8 +27,10 @@ All notable changes to this project are documented here.
   updater never found the hashes and never bumped rtk.
 - `pi.sh` never mounts the pi-sandbox repo or a folder containing it, even if
   `ALLOWED` lists it: the agent could rewrite `pi.conf`/`pi.sh` and get them
-  executed on the host at the next launch. Launching from the repo itself is
-  refused, and the example config no longer lists the repo.
+  executed on the host at the next launch. A folder inside the repo (its
+  `.git` hooks run on the host) is refused too, and the check resolves
+  symlinks and ignores case (APFS). Launching from the repo is refused, and the
+  example config no longer lists the repo.
 - A folder list or key list written on one line (`ALLOWED=("/a" "/b")`) is
   now edited correctly. The launcher used to "add" the folder without writing
   it, then relaunch in an endless prompt loop, and `install.sh` reported a key

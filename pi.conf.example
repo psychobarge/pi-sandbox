@@ -4,8 +4,8 @@
 #   cp pi.conf.example pi.conf
 # pi.sh auto-creates pi.conf from this example on first run if it is missing.
 
-# Allowed folders: the container sees ONLY these. Never list pi-sandbox itself
-# or a parent of it (~, ~/Workspace): the agent could rewrite pi.conf/pi.sh and
+# Allowed folders: the container sees ONLY these. Never list pi-sandbox itself,
+# a folder inside it, or a parent of it (~, ~/Workspace): the agent could rewrite pi.conf/pi.sh and
 # get them run on the host. pi.sh skips such entries.
 # - Launched from inside one → confined to that folder, mounted at its real
 #   path (pi's footer shows the actual location).

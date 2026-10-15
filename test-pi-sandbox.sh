@@ -120,8 +120,8 @@ check "every emptyable array in pi.sh is expanded with the guard" bash -c '
 # Two allowed folders named `api` used to give one container target, so Docker
 # dropped one mount. Both must now be mounted, the second under a suffix.
 P2="$TMP/pi2"; mkdir -p "$P2/a/api" "$P2/b/api" "$P2/run"
-cp "$SRC/pi.sh" "$P2/"
-cat > "$P2/pi.conf" <<EOF
+mkdir -p "$P2/repo"; cp "$SRC/pi.sh" "$P2/repo/"
+cat > "$P2/repo/pi.conf" <<EOF
 ALLOWED=("$P2/a/api" "$P2/b/api")
 API_KEYS=()
 IMAGE="pi-sandbox"
@@ -130,7 +130,7 @@ RTK_VOLUME="rtk-data"
 WORKSPACE="/workspace"
 DOCKER_ARGS=()
 EOF
-printf '#!/bin/sh\nexit 0\n' > "$P2/update-pi-sandbox.sh"; chmod +x "$P2/update-pi-sandbox.sh"
+printf '#!/bin/sh\nexit 0\n' > "$P2/repo/update-pi-sandbox.sh"; chmod +x "$P2/repo/update-pi-sandbox.sh"
 STUB2="$TMP/stub2"; mkdir -p "$STUB2"
 cat > "$STUB2/docker" <<'STUB'
 #!/bin/sh
@@ -139,7 +139,7 @@ exit 0
 STUB
 chmod +x "$STUB2/docker"
 : > "$TMP/docker.args"
-( cd "$P2/run" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P2/pi.sh" ) >"$TMP/pi2.out" 2>&1
+( cd "$P2/run" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P2/repo/pi.sh" ) >"$TMP/pi2.out" 2>&1
 check "duplicate basenames: both folders are mounted" bash -c '
   grep -q ":/workspace/api$" "$0" && grep -q ":/workspace/api-2$" "$0"' "$TMP/docker.args"
 
@@ -159,21 +159,21 @@ check "install.sh creates logs before the retention find" \
 # Answer `y` from a folder outside ALLOWED: pi.sh appends it and relaunches confined.
 add_case() {  # name, initial ALLOWED block
   local d="$TMP/add-$1"; mkdir -p "$d/run"
-  cp "$SRC/pi.sh" "$d/"; printf '#!/bin/sh\nexit 0\n' > "$d/update-pi-sandbox.sh"; chmod +x "$d/update-pi-sandbox.sh"
-  { printf '%s\n' "$2"; sed -n '/^API_KEYS/,$p' "$P/pi.conf"; } > "$d/pi.conf"
-  ( cd "$d/run" && printf 'y\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$d/pi.sh" ) >"$d/out" 2>&1
+  mkdir -p "$d/repo"; cp "$SRC/pi.sh" "$d/repo/"; printf '#!/bin/sh\nexit 0\n' > "$d/repo/update-pi-sandbox.sh"; chmod +x "$d/repo/update-pi-sandbox.sh"
+  { printf '%s\n' "$2"; sed -n '/^API_KEYS/,$p' "$P/pi.conf"; } > "$d/repo/pi.conf"
+  ( cd "$d/run" && printf 'y\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$d/repo/pi.sh" ) >"$d/out" 2>&1
   echo "$d"
 }
 d="$(add_case multi 'ALLOWED=(
   "/a (old)"   # a ) in a path and a comment
 )')"
 check "multi-line list: folder added and confined" grep -qF "Confined to: $d/run" "$d/out"
-check "multi-line list: original entries kept" bash -c '. "$1"; [ "${ALLOWED[0]}" = "/a (old)" ] && [ "${ALLOWED[1]}" = "$2" ]' _ "$d/pi.conf" "$d/run"
+check "multi-line list: original entries kept" bash -c '. "$1"; [ "${ALLOWED[0]}" = "/a (old)" ] && [ "${ALLOWED[1]}" = "$2" ]' _ "$d/repo/pi.conf" "$d/run"
 d="$(add_case one 'ALLOWED=("/a" "/b")')"
 check "one-line list: folder added and confined" grep -qF "Confined to: $d/run" "$d/out"
 d="$(add_case dup 'ALLOWED=()')"
-( cd "$d/run" && printf 'y\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$d/pi.sh" ) >/dev/null 2>&1
-check "second launch does not duplicate the entry" test "$(grep -cF "\"$d/run\"" "$d/pi.conf")" = 1
+( cd "$d/run" && printf 'y\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$d/repo/pi.sh" ) >/dev/null 2>&1
+check "second launch does not duplicate the entry" test "$(grep -cF "\"$d/run\"" "$d/repo/pi.conf")" = 1
 
 # install.sh adds DEEPSEEK_API_KEY the same way (guard first, so it is idempotent).
 CONF="$TMP/conf"; mkdir -p "$CONF"; sed '/DEEPSEEK_API_KEY/d' "$SRC/pi.conf.example" > "$CONF/pi.conf"
@@ -300,8 +300,8 @@ check "no GNU-only \\?/\\+ escapes in sed expressions (BSD sed)" \
 # allowed path is confined to it, a sibling sharing the prefix (`proj` vs
 # `proj-extra`) is not.
 P3="$TMP/pi3"; mkdir -p "$P3/run" "$P3/allowed/proj/sub" "$P3/allowed/proj-extra"
-cp "$SRC/pi.sh" "$P3/"
-cat > "$P3/pi.conf" <<EOF
+mkdir -p "$P3/repo"; cp "$SRC/pi.sh" "$P3/repo/"
+cat > "$P3/repo/pi.conf" <<EOF
 ALLOWED=("$P3/allowed/proj")
 API_KEYS=()
 IMAGE="pi-sandbox"
@@ -310,8 +310,8 @@ RTK_VOLUME="rtk-data"
 WORKSPACE="/workspace"
 DOCKER_ARGS=()
 EOF
-printf '#!/bin/sh\nexit 0\n' > "$P3/update-pi-sandbox.sh"; chmod +x "$P3/update-pi-sandbox.sh"
-run_pi3() { ( cd "$1" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P3/pi.sh" ) >"$2" 2>&1; }
+printf '#!/bin/sh\nexit 0\n' > "$P3/repo/update-pi-sandbox.sh"; chmod +x "$P3/repo/update-pi-sandbox.sh"
+run_pi3() { ( cd "$1" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P3/repo/pi.sh" ) >"$2" 2>&1; }
 : > "$TMP/docker.args"
 run_pi3 "$P3/allowed/proj/sub" "$TMP/pi3-confined.out"
 check "inside an allowed folder: confined to it" \
@@ -330,8 +330,8 @@ check "sibling: allowed folders still mounted" \
 # A trailing slash used to turn the pattern into `…/proj//*` (no match) and
 # append the same folder to ALLOWED on every launch.
 P4="$TMP/pi4"; mkdir -p "$P4/run" "$P4/allowed/proj/sub"
-cp "$SRC/pi.sh" "$P4/"
-cat > "$P4/pi.conf" <<EOF
+mkdir -p "$P4/repo"; cp "$SRC/pi.sh" "$P4/repo/"
+cat > "$P4/repo/pi.conf" <<EOF
 ALLOWED=("$P4/allowed/proj/")
 API_KEYS=()
 IMAGE="pi-sandbox"
@@ -340,12 +340,12 @@ RTK_VOLUME="rtk-data"
 WORKSPACE="/workspace"
 DOCKER_ARGS=()
 EOF
-printf '#!/bin/sh\nexit 0\n' > "$P4/update-pi-sandbox.sh"; chmod +x "$P4/update-pi-sandbox.sh"
-( cd "$P4/allowed/proj/sub" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P4/pi.sh" ) >"$TMP/pi4.out" 2>&1
+printf '#!/bin/sh\nexit 0\n' > "$P4/repo/update-pi-sandbox.sh"; chmod +x "$P4/repo/update-pi-sandbox.sh"
+( cd "$P4/allowed/proj/sub" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P4/repo/pi.sh" ) >"$TMP/pi4.out" 2>&1
 check "trailing slash in ALLOWED still confines" \
   grep -qF "Confined to: $P4/allowed/proj" "$TMP/pi4.out"
 check "trailing slash: folder not appended again" \
-  test "$(grep -c 'allowed/proj' "$P4/pi.conf")" = 1
+  test "$(grep -c 'allowed/proj' "$P4/repo/pi.conf")" = 1
 
 # ===== repo never mounted (pi.sh) =========================================
 # ALLOWED naming the repo, or a parent of it, would let the agent rewrite
@@ -371,6 +371,23 @@ check "repo parent: the legit folder is still mounted" \
 ( cd "$P5" && printf 'y\n' | PATH="$STUB2:$PATH" "$P5/pi.sh" ) >"$TMP/pi5b.out" 2>&1
 check "launching from the repo itself is refused" test $? -ne 0
 check "launch from the repo: pi.conf untouched" test "$(grep -c "$P5" "$P5/pi.conf")" = 1
+# A folder inside the repo (e.g. .git, whose hooks run on the host) is refused too.
+mkdir -p "$P5/.git"
+( cd "$P5/.git" && printf 'y\n' | PATH="$STUB2:$PATH" "$P5/pi.sh" ) >"$TMP/pi5c.out" 2>&1
+check "launching from inside the repo is refused" test $? -ne 0
+check "launch from inside the repo: pi.conf untouched" test "$(grep -c "$P5" "$P5/pi.conf")" = 1
+# A symlink to a parent, or the parent in another case (APFS ignores case), is skipped.
+ln -s "$TMP" "$TMP/ok5/link-to-parent"
+UPPER="$(printf '%s' "$P5" | tr '[:lower:]' '[:upper:]')"
+sed -i.bak "s|^ALLOWED=.*|ALLOWED=(\"$TMP/ok5/link-to-parent\" \"$UPPER\" \"$TMP/ok5\")|" "$P5/pi.conf"
+: > "$TMP/docker.args"
+( cd "$TMP/run5" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P5/pi.sh" ) >"$TMP/pi5d.out" 2>&1
+check "symlink to a repo parent is skipped" \
+  bash -c '! grep -q "^$1:" "$2"' _ "$TMP/ok5/link-to-parent" "$TMP/docker.args"
+check "repo path in another case is skipped" \
+  bash -c '! grep -qF "$1:" "$2"' _ "$UPPER" "$TMP/docker.args"
+check "symlink/case: the legit folder is still mounted" \
+  grep -qx "$TMP/ok5:/workspace/ok5" "$TMP/docker.args"
 
 # ===== unsafe launch path (pi.sh) =========================================
 # pi.conf is sourced: a folder named x$(cmd) written between double quotes
@@ -419,11 +436,11 @@ check "failed session is logged with the image id" \
 # ===== models.json mount (pi.sh) ===========================================
 # Without :ro any session could edit the repo's models.json on the host, even
 # when the repo is not in ALLOWED.
-mkdir -p "$P3/config"; echo '{}' > "$P3/config/models.json"
+mkdir -p "$P3/repo/config"; echo '{}' > "$P3/repo/config/models.json"
 : > "$TMP/docker.args"
 run_pi3 "$P3/allowed/proj" "$TMP/pi3-models.out"
 check "models.json is mounted read-only" \
-  grep -qx "$P3/config/models.json:/root/.pi/agent/models.json:ro" "$TMP/docker.args"
+  grep -qx "$P3/repo/config/models.json:/root/.pi/agent/models.json:ro" "$TMP/docker.args"
 
 # ===== ~ in ALLOWED (pi.sh) ================================================
 # Bash does not expand ~ inside double quotes: "~/x" stayed a literal path that

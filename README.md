@@ -156,9 +156,10 @@ docker run --rm -v pi-agent-home:/root/.pi/agent pi-sandbox install npm:@author/
 Extensions persist across launches (volume `pi-agent-home`). Uninstall with
 `!pi uninstall npm:@author/package` or by deleting the file.
 
-> 🔒 Extensions run with the pi process permissions: inside the container they
-> can't touch the host beyond the mounted folders. Only install sources you
-> trust.
+> 🔒 Extensions run with the pi process permissions: they can read the
+> forwarded API keys and write to the mounted folders (see
+> [what the sandbox does not protect](#what-the-sandbox-does-not-protect)).
+> Only install sources you trust.
 
 ## Updating pi & rtk
 
