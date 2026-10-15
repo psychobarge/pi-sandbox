@@ -225,6 +225,8 @@ if command -v python3 >/dev/null 2>&1; then
   ]
 }
 EOF
+  printf '{"enabledModels": ["openai/gpt-5", "openai/o4"]}\n' > "$M/settings2.json"
+  python3 "$MERGE" "$M/settings2.json" "$DS" >/dev/null 2>&1
   python3 "$MERGE" "$M/settings.json" "$DS" >/dev/null 2>&1
   check "merge: user's own package kept" \
     grep -q 'npm:mon-ext-perso' "$M/settings.json"
@@ -237,6 +239,12 @@ EOF
   check "merge: user's own keys kept" grep -q '"theme": "light"' "$M/settings.json"
   check "merge: valid json" \
     python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$M/settings.json"
+  check "merge: enabledModels merged, not replaced" \
+    python3 -c 'import json,sys; m=json.load(open(sys.argv[1]))["enabledModels"]; sys.exit(0 if "openai/gpt-5" in m and "deepseek/deepseek-flash" in m else 1)' "$M/settings2.json"
+  M3="$TMP/merge-bad"; mkdir -p "$M3"; printf '{"packages": ["npm:mine"],}\n' > "$M3/settings.json"
+  python3 "$MERGE" "$M3/settings.json" "$DS" >/dev/null 2>&1
+  check "merge: invalid JSON stops the script" test $? -ne 0
+  check "merge: invalid JSON file left untouched" grep -q 'npm:mine' "$M3/settings.json"
   M2="$TMP/merge-empty"; mkdir -p "$M2"
   python3 "$MERGE" "$M2/settings.json" "$DS" >/dev/null 2>&1
   check "merge: works with no settings.json (fresh volume)" \

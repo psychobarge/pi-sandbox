@@ -12,17 +12,16 @@ current, deepseek = sys.argv[1], sys.argv[2]
 try:
     with open(current) as f:
         settings = json.load(f)
-except (OSError, ValueError):
-    settings = {}
+except FileNotFoundError:
+    settings = {}   # fresh volume; invalid JSON must still stop the script, not wipe the file
 with open(deepseek) as f:
     ds = json.load(f)
 
-for key in ("defaultProvider", "defaultModel", "enabledModels"):
+for key in ("defaultProvider", "defaultModel"):
     settings[key] = ds[key]
-packages = settings.setdefault("packages", [])
-for pkg in ds["packages"]:
-    if pkg not in packages:
-        packages.append(pkg)
+for key in ("enabledModels", "packages"):
+    merged = settings.setdefault(key, [])
+    merged.extend(x for x in ds[key] if x not in merged)
 
 with open(current, "w") as f:
     json.dump(settings, f, indent=2)

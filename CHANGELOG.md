@@ -5,6 +5,10 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- The DeepSeek settings merge no longer loses data: an invalid `settings.json`
+  (e.g. a trailing comma) now stops the script instead of being rewritten with
+  only the DeepSeek keys, and `enabledModels` is merged like `packages` instead
+  of replaced.
 - `install.sh` no longer stops silently when the Keychain write fails (locked
   keychain, SSH session): under `set -e` that aborted the install before the
   `pi` launcher was created. It now prints how to add the key later and goes on.
