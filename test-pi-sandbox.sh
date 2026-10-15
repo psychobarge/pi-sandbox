@@ -167,8 +167,8 @@ cat > "$VSSTUB/docker" <<'STUB'
 #!/bin/sh
 case "$*" in
   *"version --format"*) exit 0 ;;
-  *entrypoint*rtk*) printf 'rtk %s\n' "${STUB_RTK_IMAGE:-1.0.0}" ;;
-  *"--version"*) printf '%s\n' "${STUB_PI_IMAGE:-1.2.0}" ;;
+  *"pi --version; rtk --version"*)
+    printf '%s\nrtk %s\n' "${STUB_PI_IMAGE:-1.2.0}" "${STUB_RTK_IMAGE:-1.0.0}" ;;
 esac
 exit 0
 STUB
@@ -204,6 +204,23 @@ DOCKER_DOWN="$TMP/dockerdown"; mkdir -p "$DOCKER_DOWN"
 printf '#!/bin/sh\nexit 1\n' > "$DOCKER_DOWN/docker"; chmod +x "$DOCKER_DOWN/docker"
 check "status: docker down -> up-to-date (never blocks a launch)" \
   test "$(PATH="$DOCKER_DOWN:$PATH" "$VS/update-pi-sandbox.sh" --status)" = "up-to-date"
+# pi and rtk used to be probed by two separate `docker run` (2 x ~0.3-1 s dead
+# time per launch); they are now read from a single container start.
+CNT="$TMP/vscount"; mkdir -p "$CNT"
+cat > "$CNT/docker" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >> "$COUNT_FILE"
+case "$*" in
+  *"version --format"*) exit 0 ;;
+  *"pi --version; rtk --version"*) printf '1.2.0\nrtk 1.0.0\n' ;;
+esac
+exit 0
+STUB
+chmod +x "$CNT/docker"
+: > "$TMP/vscount.args"
+PATH="$CNT:$VSSTUB:$PATH" COUNT_FILE="$TMP/vscount.args" "$VS/update-pi-sandbox.sh" --status >/dev/null
+check "status probes the image once (one docker run)" \
+  test "$(grep -c 'pi --version; rtk --version' "$TMP/vscount.args")" = 1
 # macOS ships BSD sed, where `\?` and `\+` in a basic regex are literals, not
 # GNU repetition — that silently broke rtk_latest_version.
 check "no GNU-only \\?/\\+ escapes in sed expressions (BSD sed)" \

@@ -35,13 +35,14 @@ rtk_latest_version() {
 }
 
 # Versions actually baked into the image (not the pins) — source of truth.
-image_pi_version() {
-  docker run --rm pi-sandbox --version 2>/dev/null || true
+# Both probes in one container start: each `docker run` costs ~0.3-1 s.
+image_versions() {
+  docker run --rm --entrypoint bash pi-sandbox -c 'pi --version; rtk --version' 2>/dev/null || true
 }
 
-image_rtk_version() {
-  docker run --rm --entrypoint rtk pi-sandbox --version 2>/dev/null | awk '{print $NF}' || true
-}
+# pi prints a bare "1.2.0" (line 1); rtk prints "rtk x.y.z" (line 2).
+image_pi_version()  { printf '%s\n' "$1" | sed -n '1p'; }
+image_rtk_version() { printf '%s\n' "$1" | sed -n '2p' | awk '{print $NF}'; }
 
 docker_ok() {
   docker version --format '{{.Server.Version}}' >/dev/null 2>&1
@@ -61,9 +62,10 @@ lock_is_live() {
 
 # "pi v1.2.3 + rtk v1.0.0" for whatever is stale, or empty when all is current.
 stale_label() {
-  local label="" lp lr ip ir
-  lp="$(pi_latest_version || true)"; ip="$(image_pi_version)"
-  lr="$(rtk_latest_version || true)"; ir="$(image_rtk_version)"
+  local label="" lp lr ip ir versions
+  lp="$(pi_latest_version || true)"; lr="$(rtk_latest_version || true)"
+  versions="$(image_versions)"
+  ip="$(image_pi_version "$versions")"; ir="$(image_rtk_version "$versions")"
   if [ -n "$lp" ] && [ "$lp" != "$ip" ]; then label="pi v$lp"; fi
   if [ -n "$lr" ] && [ "$lr" != "$ir" ]; then label="${label:+$label + }rtk v$lr"; fi
   printf '%s' "$label"
@@ -82,9 +84,10 @@ rebuild() {
   find "$DIR/logs" -name '*.log' -mtime +30 -delete
   docker_ok || { echo "[$(date '+%F %T')] docker down, skip" >> "$LOG"; exit 0; }
 
-  local lp lr ip ir changed="" rtk_changed="" old_image=""
-  lp="$(pi_latest_version || true)"; ip="$(image_pi_version)"
-  lr="$(rtk_latest_version || true)"; ir="$(image_rtk_version)"
+  local lp lr ip ir changed="" rtk_changed="" old_image="" versions
+  lp="$(pi_latest_version || true)"; lr="$(rtk_latest_version || true)"
+  versions="$(image_versions)"
+  ip="$(image_pi_version "$versions")"; ir="$(image_rtk_version "$versions")"
 
   # lock: one rebuild at a time (macOS has no flock by default)
   if lock_is_live; then
