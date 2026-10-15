@@ -1,5 +1,8 @@
 logs/
 
+# macOS Finder metadata
+.DS_Store
+
 # real local config (copy of pi.conf.example) — keep personal paths out of git
 pi.conf
 PLAN-keyproxy.md
