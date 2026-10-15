@@ -387,6 +387,17 @@ check "repo parent: the legit folder is still mounted" \
 check "launching from the repo itself is refused" test $? -ne 0
 check "launch from the repo: pi.conf untouched" test "$(grep -c "$P5" "$P5/pi.conf")" = 1
 
+# ===== unsafe launch path (pi.sh) =========================================
+# pi.conf is sourced: a folder named x$(cmd) written between double quotes
+# would run cmd on the host at every launch.
+P6="$TMP/pi6"; mkdir -p "$P6" "$TMP"'/bad$(touch '"$TMP"'/pwned)'
+cp "$SRC/pi.sh" "$P6/"; cp "$P/pi.conf" "$P6/pi.conf"
+printf '#!/bin/sh\nexit 0\n' > "$P6/update-pi-sandbox.sh"; chmod +x "$P6/update-pi-sandbox.sh"
+cp "$P6/pi.conf" "$TMP/pi6.conf.orig"
+( cd "$TMP"'/bad$(touch '"$TMP"'/pwned)' && printf 'y\n' | PATH="$STUB2:$PATH" "$P6/pi.sh" ) >"$TMP/pi6.out" 2>&1
+check "unsafe launch path: refused" grep -q 'add it to pi.conf by hand' "$TMP/pi6.out"
+check "unsafe launch path: pi.conf unchanged" cmp -s "$P6/pi.conf" "$TMP/pi6.conf.orig"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

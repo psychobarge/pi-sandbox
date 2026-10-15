@@ -5,6 +5,10 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- Answering `y` to "Add this folder to ALLOWED" in a folder whose path contains
+  `"`, `$`, a backtick or `\` is now refused: the path was written unescaped
+  into the sourced `pi.conf`, so a folder named `x$(cmd)` ran `cmd` on the host
+  at every launch.
 - rtk updates work again: the `checksums.txt` download did not follow GitHub's
   redirect (`curl` without `-L` returned an empty body with exit 0), so the
   updater never found the hashes and never bumped rtk.

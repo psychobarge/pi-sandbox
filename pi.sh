@@ -86,6 +86,10 @@ else
   read -r answer || true
   case "$answer" in
     y|Y|yes|YES)
+      # pi.conf is sourced on the host: these characters would run code or be mangled
+      case "$LAUNCH_DIR" in
+        *[\"\$\`\\]*) echo "❌ path contains \" \$ \` or \\ — add it to pi.conf by hand"; exit 1 ;;
+      esac
       # Shared paren-aware parser: a one-line list has no line starting with
       # ")", which the old `^\)` match missed (folder looked added but wasn't).
       awk -v array=ALLOWED -v entry="\"$LAUNCH_DIR\"" \
