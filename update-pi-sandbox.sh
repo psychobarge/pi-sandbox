@@ -121,7 +121,7 @@ rebuild() {
     # The tag is movable; pin the new tarball hashes next to the new version so
     # the build keeps verifying bytes. No checksums → don't bump (a version
     # without a matching hash would make every rebuild fail).
-    sums="$(curl -fsS --max-time 10 \
+    sums="$(curl -fsSL --max-time 10 \
       "https://github.com/rtk-ai/rtk/releases/download/v$lr/checksums.txt" 2>/dev/null || true)"
     h_x86="$(printf '%s\n' "$sums" | awk '$2=="rtk-x86_64-unknown-linux-musl.tar.gz" {print $1}')"
     h_arm="$(printf '%s\n' "$sums" | awk '$2=="rtk-aarch64-unknown-linux-gnu.tar.gz" {print $1}')"

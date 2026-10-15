@@ -5,6 +5,9 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- rtk updates work again: the `checksums.txt` download did not follow GitHub's
+  redirect (`curl` without `-L` returned an empty body with exit 0), so the
+  updater never found the hashes and never bumped rtk.
 - `pi.sh` never mounts the pi-sandbox repo or a folder containing it, even if
   `ALLOWED` lists it: the agent could rewrite `pi.conf`/`pi.sh` and get them
   executed on the host at the next launch. Launching from the repo itself is
