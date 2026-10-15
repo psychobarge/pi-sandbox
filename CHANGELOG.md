@@ -20,6 +20,11 @@ All notable changes to this project are documented here.
   `RTK_VOLUME` from `pi.conf` — the same file `pi.sh` reads — instead of
   hardcoding `pi-sandbox`/`pi-agent-home`/`rtk-data`. Renaming them used to
   build and populate one image/volume while the launcher started another.
+- The rtk release tarball is now verified against a pinned SHA-256 before it is
+  installed (`Dockerfile.pi`), instead of trusting a movable tag.
+  `update-pi-sandbox.sh` repins both architectures' hashes from the release's
+  `checksums.txt` when it bumps `RTK_VERSION`, and skips the bump if that file
+  is unavailable.
 
 ## [1.0.0] — 2026-10-15
 

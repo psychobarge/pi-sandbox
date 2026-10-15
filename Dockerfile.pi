@@ -11,13 +11,19 @@ RUN apt-get update \
 # Default edition (Apache-2.0 + BUSL-1.1): it keeps the compression engine that
 # rtk-oss drops. x86_64 ships musl (static), aarch64 ships gnu.
 ARG RTK_VERSION=v1.0.0
+# SHA-256 of each release tarball, from that release's checksums.txt. A tag is
+# movable, so update-pi-sandbox.sh repins these together with RTK_VERSION; the
+# build verifies the download against them (see the sha256sum check below).
+ARG RTK_SHA256_X86_64=b0b69fbed72f55d8eae18587c0b6bc140a8a8b39d5b7c6e6df33795249940926
+ARG RTK_SHA256_AARCH64=9438c2c99d428fa6fbe7f4d1c01a87babd5feec17ee6d7bb3372a613a21db7d3
 RUN case "$(uname -m)" in \
-       x86_64)  TARGET=x86_64-unknown-linux-musl ;; \
-       aarch64) TARGET=aarch64-unknown-linux-gnu ;; \
+       x86_64)  TARGET=x86_64-unknown-linux-musl; SHA="${RTK_SHA256_X86_64}" ;; \
+       aarch64) TARGET=aarch64-unknown-linux-gnu; SHA="${RTK_SHA256_AARCH64}" ;; \
        *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;; \
      esac \
   && curl -fsSL -o /tmp/rtk.tar.gz \
      "https://github.com/rtk-ai/rtk/releases/download/${RTK_VERSION}/rtk-${TARGET}.tar.gz" \
+  && echo "${SHA}  /tmp/rtk.tar.gz" | sha256sum -c - \
   && tar -xzf /tmp/rtk.tar.gz -C /tmp \
   && install -m 0755 /tmp/rtk /usr/local/bin/rtk \
   && rm -rf /tmp/rtk.tar.gz /tmp/rtk \

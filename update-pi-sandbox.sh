@@ -91,7 +91,7 @@ rebuild() {
   find "$DIR/logs" -name '*.log' -mtime +30 -delete
   docker_ok || { echo "[$(date '+%F %T')] docker down, skip" >> "$LOG"; exit 0; }
 
-  local lp lr ip ir changed="" rtk_changed="" old_image="" versions
+  local lp lr ip ir changed="" rtk_changed="" old_image="" versions sums h_x86 h_arm
   lp="$(pi_latest_version || true)"; lr="$(rtk_latest_version || true)"
   versions="$(image_versions)"
   ip="$(image_pi_version "$versions")"; ir="$(image_rtk_version "$versions")"
@@ -118,9 +118,20 @@ rebuild() {
     changed="pi v$lp"
   fi
   if [ -n "$lr" ] && [ "$lr" != "$ir" ]; then
-    sed -i '' "s|^ARG RTK_VERSION=v.*|ARG RTK_VERSION=v$lr|" Dockerfile.pi
-    changed="${changed:+$changed + }rtk v$lr"
-    rtk_changed=1
+    # The tag is movable; pin the new tarball hashes next to the new version so
+    # the build keeps verifying bytes. No checksums → don't bump (a version
+    # without a matching hash would make every rebuild fail).
+    sums="$(curl -fsS --max-time 10 \
+      "https://github.com/rtk-ai/rtk/releases/download/v$lr/checksums.txt" 2>/dev/null || true)"
+    h_x86="$(printf '%s\n' "$sums" | awk '$2=="rtk-x86_64-unknown-linux-musl.tar.gz" {print $1}')"
+    h_arm="$(printf '%s\n' "$sums" | awk '$2=="rtk-aarch64-unknown-linux-gnu.tar.gz" {print $1}')"
+    if [ -n "$h_x86" ] && [ -n "$h_arm" ]; then
+      sed -i '' "s|^ARG RTK_VERSION=v.*|ARG RTK_VERSION=v$lr|; s|^ARG RTK_SHA256_X86_64=.*|ARG RTK_SHA256_X86_64=$h_x86|; s|^ARG RTK_SHA256_AARCH64=.*|ARG RTK_SHA256_AARCH64=$h_arm|" Dockerfile.pi
+      changed="${changed:+$changed + }rtk v$lr"
+      rtk_changed=1
+    else
+      echo "[$(date '+%F %T')] rtk v$lr checksums unavailable — not bumping" >> "$LOG"
+    fi
   fi
   if [ -z "$changed" ]; then exit 0; fi
 

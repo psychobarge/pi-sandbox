@@ -74,6 +74,17 @@ check "updater never prunes images globally" \
 check "updater removes the previous image by exact id" \
   bash -c 'grep -q "docker image rm \"\$old_image\"" "$0"' "$SRC/update-pi-sandbox.sh"
 
+# ===== rtk tarball pin (Dockerfile.pi / update-pi-sandbox.sh) ==============
+# The release tag is movable (v1.0.0 can be retagged), so the tarball is
+# verified against a hash pinned in the Dockerfile; the updater repins it when
+# it bumps RTK_VERSION.
+check "Dockerfile verifies the rtk tarball's sha256" \
+  grep -q 'sha256sum -c -' "$SRC/Dockerfile.pi"
+check "Dockerfile pins both arch hashes" \
+  bash -c 'grep -q "^ARG RTK_SHA256_X86_64=[0-9a-f]\{64\}$" "$1" && grep -q "^ARG RTK_SHA256_AARCH64=[0-9a-f]\{64\}$" "$1"' _ "$SRC/Dockerfile.pi"
+check "updater repins the rtk hashes on a version bump" \
+  bash -c 'grep -q "checksums.txt" "$1" && grep -q "ARG RTK_SHA256_X86_64=" "$1"' _ "$SRC/update-pi-sandbox.sh"
+
 # ===== empty ALLOWED / API_KEYS (pi.sh) ====================================
 # macOS ships bash 3.2, where "${empty[@]}" under `set -u` is an unbound
 # variable. Run the launcher for real with both lists empty and a stubbed
