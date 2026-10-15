@@ -40,6 +40,9 @@ All notable changes to this project are documented here.
   had actually succeeded as failed.
 
 ### Added
+- README: a "What the sandbox does not protect" section (forwarded keys are
+  readable by the agent; files it writes in an allowed repo can run on the host
+  through git hooks and editor/shell tooling).
 - Numerous unit tests for the launcher, the installer and the update script
   (`test-pi-sandbox.sh`), runnable with `./test-pi-sandbox.sh` (no Docker, no network).
 

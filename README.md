@@ -3,7 +3,7 @@
 > Runs the [pi](https://github.com/earendil-works/pi-mono) coding agent in an
 > isolated Docker container on macOS (OrbStack). The agent only sees **the
 > folders you list** and the Internet — never your home dir, `~/.ssh` or host
-> `~/.pi/agent`.
+> `~/.pi/agent`. See [what the sandbox does not protect](#what-the-sandbox-does-not-protect).
 
 **Everything after `./install.sh` is automatic:** each `pi` launch checks for
 new pi and rtk releases and rebuilds the image in the background if needed,
@@ -173,6 +173,23 @@ Manual:
 ```bash
 ./update-pi-sandbox.sh    # rebuild now (blocking)
 ```
+
+## What the sandbox does not protect
+
+The container limits what the agent can *read* on your Mac. It is not a
+guarantee that nothing it does can reach the host:
+
+- **Forwarded API keys can be read.** They are environment variables inside a
+  container that has Internet access: the agent, an extension, or a hostile page
+  the agent reads can send them away. Treat them as keys you will rotate, and
+  use provider keys with spending limits.
+- **Files written in an allowed folder can run on the host.** An allowed git
+  repo is mounted with its `.git/`, so the agent can write a git hook,
+  `.envrc`, `.vscode/tasks.json` or a `package.json` script that runs as you at
+  your next `git commit`, `cd` or `npm run`. Review what the agent changed
+  before you run anything on the host.
+- `--network none` in `DOCKER_ARGS` cuts the Internet, but then the model
+  provider is unreachable too.
 
 ## Troubleshooting
 
