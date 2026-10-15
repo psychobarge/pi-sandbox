@@ -400,6 +400,22 @@ check "API key value never reaches docker's arguments" \
 check "status probes time out after at most 2 s" \
   bash -c 'grep -q "curl -fsS --max-time 2 \"\$PI_LATEST_URL\"" "$0" && grep -q "curl -fsS --max-time 2 \"\$RTK_LATEST_URL\"" "$0"' "$SRC/update-pi-sandbox.sh"
 
+# ===== failed session log (pi.sh) ==========================================
+# The log line for a failed session carries the image id, so 137/127 can be traced.
+STUB3="$TMP/stub3"; mkdir -p "$STUB3"
+cat > "$STUB3/docker" <<'STUB'
+#!/bin/sh
+case "$1" in
+  run) exit 7 ;;
+  image) [ "$2" = inspect ] && [ "$3" = --format ] && echo sha256:abc123def4567890 ;;
+esac
+exit 0
+STUB
+chmod +x "$STUB3/docker"
+( cd "$TMP/run0" && printf 'n\n' | PATH="$STUB3:$PATH" "$P/pi.sh" ) >/dev/null 2>&1
+check "failed session is logged with the image id" \
+  grep -q 'code 7, image sha256:abc123def4' "$P/logs/usage-"*.log
+
 # ===== models.json mount (pi.sh) ===========================================
 # Without :ro any session could edit the repo's models.json on the host, even
 # when the repo is not in ALLOWED.

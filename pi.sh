@@ -155,5 +155,5 @@ docker run --rm -it \
   "${WORKDIR_ARGS[@]}" \
   ${DOCKER_ARGS[@]+"${DOCKER_ARGS[@]}"} \
   "${IMAGE}" || code=$?
-[ "$code" -ne 0 ] && log_error "pi session exited with error (code $code)" || true
+[ "$code" -ne 0 ] && log_error "pi session exited with error (code $code, image $(docker image inspect --format "{{.Id}}" "${IMAGE}" 2>/dev/null | cut -c1-19))" || true
 exit "$code"

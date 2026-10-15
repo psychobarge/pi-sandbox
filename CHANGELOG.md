@@ -52,6 +52,8 @@ All notable changes to this project are documented here.
   (`test-pi-sandbox.sh`), runnable with `./test-pi-sandbox.sh` (no Docker, no network).
 
 ### Changed
+- The "pi session exited with error" log line now includes the image id, so
+  codes like 137 or 127 can be tied to a given build.
 - The pre-launch version probes time out after 2 s instead of 5 s, so a
   dropping network delays pi's start by less.
 - `update-pi-sandbox.sh` no longer resolves symlinks: nothing launches it
