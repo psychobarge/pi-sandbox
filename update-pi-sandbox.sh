@@ -20,7 +20,7 @@ IMAGE="${IMAGE:-pi-sandbox}"
 VOLUME="${VOLUME:-pi-agent-home}"
 
 pi_latest_version() {
-  curl -fsS --max-time 5 "$PI_LATEST_URL" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
+  curl -fsS --max-time 2 "$PI_LATEST_URL" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
 }
 
 # Latest stable rtk tag without the leading "v". /releases/latest skips
@@ -29,7 +29,7 @@ pi_latest_version() {
 # (GitHub's JSON is pretty-printed, hence the [:space:]* after the colon.)
 # NOTE: \{0,1\}, not \? — macOS ships BSD sed, where \? is a literal '?'.
 rtk_latest_version() {
-  curl -fsS --max-time 5 "$RTK_LATEST_URL" | sed -n 's/.*"tag_name":[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p'
+  curl -fsS --max-time 2 "$RTK_LATEST_URL" | sed -n 's/.*"tag_name":[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p'
 }
 
 # Versions actually baked into the image (not the pins) — source of truth.

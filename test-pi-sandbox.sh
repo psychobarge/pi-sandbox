@@ -395,6 +395,11 @@ check "API key is forwarded by name only (-e NAME)" \
 check "API key value never reaches docker's arguments" \
   bash -c '! grep -q "s3cr3t" "$0"' "$TMP/docker.args"
 
+# ===== launch-time network budget (update-pi-sandbox.sh --status) ==========
+# --status runs before every launch; a dropping network must not stall pi for 2 x 5 s.
+check "status probes time out after at most 2 s" \
+  bash -c 'grep -q "curl -fsS --max-time 2 \"\$PI_LATEST_URL\"" "$0" && grep -q "curl -fsS --max-time 2 \"\$RTK_LATEST_URL\"" "$0"' "$SRC/update-pi-sandbox.sh"
+
 # ===== models.json mount (pi.sh) ===========================================
 # Without :ro any session could edit the repo's models.json on the host, even
 # when the repo is not in ALLOWED.

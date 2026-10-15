@@ -52,6 +52,8 @@ All notable changes to this project are documented here.
   (`test-pi-sandbox.sh`), runnable with `./test-pi-sandbox.sh` (no Docker, no network).
 
 ### Changed
+- The pre-launch version probes time out after 2 s instead of 5 s, so a
+  dropping network delays pi's start by less.
 - `update-pi-sandbox.sh` no longer resolves symlinks: nothing launches it
   through one.
 - `pi.sh` passes the launch folder straight to `-w` instead of rebuilding it
