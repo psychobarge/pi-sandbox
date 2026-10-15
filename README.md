@@ -25,9 +25,10 @@ Any Docker engine works (OrbStack or Docker Desktop):
 |------|---------|
 | `Dockerfile.pi` | Image: Node 24 + pi + git + ripgrep + rtk + Python 3.13 (pip, venv) |
 | `install.sh` | One-time setup: image, config, extensions, launcher |
-| `pi.sh` | Launches the container (reads `pi.conf`, checks for updates) |
+| `pi.sh` | Launches the container (reads `pi.conf`, checks for updates, starts the keyproxy sidecar) |
+| `proxy/keyproxy.mjs` | Sidecar that injects the real API keys into outgoing requests (Node stdlib, no dependency) |
 | `update-pi-sandbox.sh` | Checks pi.dev + the rtk GitHub releases, bumps the pins and rebuilds the image |
-| `test-pi-sandbox.sh` | Checks for the host-side scripts (no Docker, no network): `./test-pi-sandbox.sh` |
+| `test-pi-sandbox.sh` | Checks for the host-side scripts and the keyproxy routing (no Docker, no network): `./test-pi-sandbox.sh` |
 | `pi.conf.example` | Configuration template (allowed folders, API keys, docker options) |
 | `pi.conf` | Your **local, gitignored** config — copy the example and fill it in |
 | `config/settings.json` | Model defaults (no provider by default — pi asks on first run) |
@@ -85,8 +86,37 @@ IMAGE="pi-sandbox"
 VOLUME="pi-agent-home"        # sessions, config, extensions (persists)
 RTK_VOLUME="rtk-data"         # rtk history
 WORKSPACE="/workspace"
-DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)   # e.g. add --network none to cut the Internet
+DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)   # no --network here, see below
 ```
+
+### API keys never enter the container (keyproxy)
+
+The model and web-search keys stay on the **host side of a sidecar** that
+`pi.sh` starts with the session:
+
+```
+Keychain ──(pi.sh)──► sidecar "keyproxy"  [real keys] ──HTTPS──► api.deepseek.com / api.openai.com / api.tavily.com
+                          ▲ plain HTTP on a private per-session docker network
+                pi container  [DEEPSEEK_API_KEY=proxy, TAVILY_API_KEY=proxy]
+```
+
+- The container only ever holds the dummy value `proxy`; the sidecar replaces
+  the `Authorization` header on the way out. The agent can **use** a key (spend
+  credits, if the key has no spending limit) but not read or copy it.
+- The route table is fixed (`/deepseek`, `/openai`, `/tavily`): an unknown path
+  is a 404, so a request can never carry a real key to a host the agent chose.
+- One private docker network per session, the port is never published on the
+  Mac, and the sidecar is removed when pi exits (Ctrl-C included).
+- A key in `API_KEYS` with **no** route (`SMITH_API_KEY`, …) is still forwarded
+  as a plain env var, and the launcher warns: `⚠ NAME has no proxy route,
+  exposed to the agent`. Add a route to `proxy/keyproxy.mjs` to cover it.
+- `--network`/`--net` in `DOCKER_ARGS` is refused when a proxied key is present
+  (it would cut pi off from the sidecar): remove it from `pi.conf`.
+
+> 🔑 **Rotate your DeepSeek / OpenAI / Tavily keys once after upgrading.**
+> Every earlier session had them in the container's environment, and the
+> transcripts in the `pi-agent-home` volume may hold a copy. Until you rotate,
+> the proxy protects keys that may already have leaked.
 
 > ⚠️ Host `~/.pi/agent` is **never mounted**: pi sessions, config and
 > extensions live in the `pi-agent-home` named volume; rtk history in
@@ -96,7 +126,8 @@ DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)   # e.g. add --network none to cut the 
 ### API keys (macOS Keychain)
 
 Keys are **not** exported in `~/.zshrc`: `pi.sh` reads them from the login
-keychain and passes them to the container. The service is always `pi-sandbox`,
+keychain and hands them to the keyproxy sidecar (never to the pi container,
+which only sees `proxy`). The service is always `pi-sandbox`,
 the account is the variable name:
 
 ```bash
@@ -181,17 +212,28 @@ Manual:
 The container limits what the agent can *read* on your Mac. It is not a
 guarantee that nothing it does can reach the host:
 
-- **Forwarded API keys can be read.** They are environment variables inside a
-  container that has Internet access: the agent, an extension, or a hostile page
-  the agent reads can send them away. Treat them as keys you will rotate, and
-  use provider keys with spending limits.
+- **Secrets in the mounted folders or in the volumes are readable.** A proxied
+  API key is not, but everything else is: project `.env` files, configs, tokens,
+  credential files (**usually the largest exposure** — keep secrets out of
+  `ALLOWED` or narrow the list). A key entered with `/login` inside pi is written
+  to `auth.json` in the `pi-agent-home` volume, which the agent can read: never
+  use `/login` in the sandbox. Keys from sessions older than keyproxy may sit in
+  the volume's transcripts → rotate them.
+- **A key in `API_KEYS` without a proxy route is handed to the agent** as a real
+  env var (the launcher prints a warning). Add a route to `proxy/keyproxy.mjs`
+  to cover it.
+- **Secrets the agent's task itself needs** (tests hitting a third-party API…)
+  must be readable, so give that service its own proxy route instead of a plain
+  env var.
 - **Files written in an allowed folder can run on the host.** An allowed git
   repo is mounted with its `.git/`, so the agent can write a git hook,
   `.envrc`, `.vscode/tasks.json` or a `package.json` script that runs as you at
   your next `git commit`, `cd` or `npm run`. Review what the agent changed
   before you run anything on the host.
-- `--network none` in `DOCKER_ARGS` cuts the Internet, but then the model
-  provider is unreachable too.
+- `DOCKER_ARGS` is where you can still cut the Internet, but note that
+  `--network`/`--net` is refused when a proxied key is present (the sidecar
+  needs the session network) and that `--network none` also cuts the model
+  provider.
 
 ## Troubleshooting
 
