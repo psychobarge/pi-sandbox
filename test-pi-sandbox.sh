@@ -240,6 +240,26 @@ check "sibling sharing the prefix is not confined" \
 check "sibling: allowed folders still mounted" \
   bash -c 'grep -qxF "$1" "$2"' _ "$P3/allowed/proj:/workspace/proj" "$TMP/docker.args"
 
+# A trailing slash used to turn the pattern into `…/proj//*` (no match) and
+# append the same folder to ALLOWED on every launch.
+P4="$TMP/pi4"; mkdir -p "$P4/run" "$P4/allowed/proj/sub"
+cp "$SRC/pi.sh" "$P4/"
+cat > "$P4/pi.conf" <<EOF
+ALLOWED=("$P4/allowed/proj/")
+API_KEYS=()
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+RTK_VOLUME="rtk-data"
+WORKSPACE="/workspace"
+DOCKER_ARGS=()
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$P4/update-pi-sandbox.sh"; chmod +x "$P4/update-pi-sandbox.sh"
+( cd "$P4/allowed/proj/sub" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P4/pi.sh" ) >"$TMP/pi4.out" 2>&1
+check "trailing slash in ALLOWED still confines" \
+  grep -qF "Confined to: $P4/allowed/proj" "$TMP/pi4.out"
+check "trailing slash: folder not appended again" \
+  test "$(grep -c 'allowed/proj' "$P4/pi.conf")" = 1
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

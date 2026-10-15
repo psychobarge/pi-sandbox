@@ -34,6 +34,7 @@ source ./pi.conf
 START_DIR=""
 START_REL=""
 for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
+  dir="${dir%/}"   # a trailing slash would make the pattern `…/proj//*` never match
   case "$LAUNCH_DIR" in
     "$dir"|"$dir"/*)
       START_DIR="$dir"
@@ -80,7 +81,8 @@ else
     y|Y|yes|YES)
       awk -v dir="$LAUNCH_DIR" '
         /^ALLOWED=\(/ { in_block=1 }
-        in_block && /^\)/ { printf "  \"%s\"\n", dir; in_block=0 }
+        in_block && index($0, "\"" dir "\"") { found=1 }
+        in_block && /^\)/ { if (!found) printf "  \"%s\"\n", dir; in_block=0 }
         { print }
       ' pi.conf > pi.conf.tmp && mv pi.conf.tmp pi.conf
       echo "✓ Added to ALLOWED (pi.conf), relaunching…"
