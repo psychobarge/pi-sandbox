@@ -140,7 +140,7 @@ rebuild() {
         || echo "[$(date '+%F %T')] rtk hook refresh failed" >> "$LOG"
     fi
     if [ "$(uname -s)" = "Darwin" ]; then
-      osascript -e "display notification \"pi-sandbox mis à jour ($changed) — redémarre pi pour l'utiliser\" with title \"pi-sandbox update\"" 2>/dev/null || true
+      osascript -e "display notification \"pi-sandbox updated ($changed) — restart pi to use it\" with title \"pi-sandbox update\"" 2>/dev/null || true
     fi
   else
     echo "[$(date '+%F %T')] build FAILED (pi=$ip→$lp, rtk=$ir→$lr) — retry next launch" >> "$LOG"

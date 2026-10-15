@@ -18,7 +18,7 @@ done
 cd "$(dirname "$SCRIPT")"
 SCRIPT="$(pwd)/$(basename "$SCRIPT")"
 
-# ====== Usage log (erreurs hôte uniquement) ======
+# ====== Usage log (host errors only) ======
 mkdir -p logs
 find logs -name '*.log' -mtime +30 -delete
 log_error() {
@@ -125,7 +125,7 @@ if docker image inspect "${IMAGE}" >/dev/null 2>&1; then
   STATUS="$("$UPDATER" --status 2>/dev/null)" || STATUS="up-to-date"
   case "$STATUS" in
     stale:*)
-      echo "→ Mise à jour disponible (${STATUS#stale:}) — récupération en arrière-plan, redémarre pi pour l'utiliser."
+      echo "→ Update available (${STATUS#stale:}) — fetching in the background, restart pi to use it."
       nohup "$UPDATER" >> "logs/update-$(date +%F).log" 2>&1 &
       ;;
   esac
@@ -147,5 +147,5 @@ docker run --rm -it \
   "${WORKDIR_ARGS[@]}" \
   ${DOCKER_ARGS[@]+"${DOCKER_ARGS[@]}"} \
   "${IMAGE}" || code=$?
-[ "$code" -ne 0 ] && log_error "session pi terminée en erreur (code $code)" || true
+[ "$code" -ne 0 ] && log_error "pi session exited with error (code $code)" || true
 exit "$code"
