@@ -27,6 +27,8 @@ Any Docker engine works (OrbStack or Docker Desktop):
 | `install.sh` | One-time setup: image, config, extensions, launcher |
 | `pi.sh` | Launches the container (reads `pi.conf`, checks for updates) |
 | `update-pi-sandbox.sh` | Checks pi.dev + the rtk GitHub releases, bumps the pins and rebuilds the image |
+| `append-array-entry.awk` | Appends an entry to a list (`ALLOWED`, `API_KEYS`) in `pi.conf` |
+| `test-pi-sandbox.sh` | Checks for the host-side scripts (no Docker, no network): `./test-pi-sandbox.sh` |
 | `pi.conf.example` | Configuration template (allowed folders, API keys, docker options) |
 | `pi.conf` | Your **local, gitignored** config — copy the example and fill it in |
 | `config/settings.json` | Model defaults (no provider by default — pi asks on first run) |
