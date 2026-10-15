@@ -30,11 +30,17 @@ log_error() {
 [ -f ./pi.conf ] || { cp ./pi.conf.example ./pi.conf; echo "✓ pi.conf created from pi.conf.example — edit it to set your folders"; }
 source ./pi.conf
 
+# Never mount the repo or a folder containing it: the agent could rewrite
+# pi.conf / pi.sh here and get them executed on the host at the next launch.
+REPO="$(dirname "$SCRIPT")"
+holds_repo() { case "$REPO/" in "$1"/*) return 0 ;; esac; return 1; }
+
 # Are we inside an allowed folder? If so, confine to it.
 START_DIR=""
 START_REL=""
 for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
   dir="${dir%/}"   # a trailing slash would make the pattern `…/proj//*` never match
+  holds_repo "$dir" && continue
   case "$LAUNCH_DIR" in
     "$dir"|"$dir"/*)
       START_DIR="$dir"
@@ -74,6 +80,7 @@ if [ -n "$START_DIR" ]; then
   [ -n "$START_REL" ] && WORKDIR_ARGS=(-w "$START_DIR/$START_REL") \
                      || WORKDIR_ARGS=(-w "$START_DIR")
 else
+  holds_repo "$LAUNCH_DIR" && { echo "❌ refusing to mount $LAUNCH_DIR: it contains pi-sandbox itself"; exit 1; }
   echo "⚠ $LAUNCH_DIR is not in ALLOWED (pi.conf)"
   printf "Add this folder to ALLOWED and launch confined to it? [y/N] "
   read -r answer || true
@@ -91,6 +98,8 @@ else
   echo "→ Mounting all allowed folders (add the folder to ALLOWED in pi.conf to confine)"
   ARGS=(); USED_NAMES=()
   for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
+    dir="${dir%/}"
+    holds_repo "$dir" && { echo "⚠ skipping $dir (contains pi-sandbox)"; continue; }
     [ -d "$dir" ] || { log_error "folder not found: $dir"; echo "⚠ folder not found: $dir"; continue; }
     # two allowed folders can share a basename: Docker would silently keep only
     # one mount, so later ones get a suffix (api, api-2) and both stay visible

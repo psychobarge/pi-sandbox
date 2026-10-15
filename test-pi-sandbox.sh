@@ -100,7 +100,8 @@ WORKSPACE="/workspace"
 DOCKER_ARGS=()
 EOF
 printf '#!/bin/sh\nexit 0\n' > "$P/update-pi-sandbox.sh"; chmod +x "$P/update-pi-sandbox.sh"
-printf 'n\n' | ( cd "$P" && PATH="$STUB:$PATH" "$P/pi.sh" ) >"$TMP/pi.out" 2>&1
+mkdir -p "$TMP/run0"
+printf 'n\n' | ( cd "$TMP/run0" && PATH="$STUB:$PATH" "$P/pi.sh" ) >"$TMP/pi.out" 2>&1
 check "empty ALLOWED/API_KEYS: launcher starts" test $? -eq 0
 check "empty ALLOWED/API_KEYS: no unbound-variable error" \
   bash -c '! grep -q "unbound variable" "$0"' "$TMP/pi.out"
@@ -356,6 +357,31 @@ check "trailing slash in ALLOWED still confines" \
   grep -qF "Confined to: $P4/allowed/proj" "$TMP/pi4.out"
 check "trailing slash: folder not appended again" \
   test "$(grep -c 'allowed/proj' "$P4/pi.conf")" = 1
+
+# ===== repo never mounted (pi.sh) =========================================
+# ALLOWED naming the repo, or a parent of it, would let the agent rewrite
+# pi.conf/pi.sh, which then run on the host at the next launch.
+P5="$TMP/pi5"; mkdir -p "$P5" "$TMP/ok5" "$TMP/run5"
+cp "$SRC/pi.sh" "$P5/"
+cat > "$P5/pi.conf" <<EOF2
+ALLOWED=("$TMP" "$P5" "$TMP/ok5")
+API_KEYS=()
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+RTK_VOLUME="rtk-data"
+WORKSPACE="/workspace"
+DOCKER_ARGS=()
+EOF2
+printf '#!/bin/sh\nexit 0\n' > "$P5/update-pi-sandbox.sh"; chmod +x "$P5/update-pi-sandbox.sh"
+: > "$TMP/docker.args"
+( cd "$TMP/run5" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P5/pi.sh" ) >"$TMP/pi5.out" 2>&1
+check "repo parent is skipped, not mounted" \
+  bash -c '! grep -q "^$1:" "$2" && ! grep -q "^$3:" "$2"' _ "$TMP" "$TMP/docker.args" "$P5"
+check "repo parent: the legit folder is still mounted" \
+  grep -qx "$TMP/ok5:/workspace/ok5" "$TMP/docker.args"
+( cd "$P5" && printf 'y\n' | PATH="$STUB2:$PATH" "$P5/pi.sh" ) >"$TMP/pi5b.out" 2>&1
+check "launching from the repo itself is refused" test $? -ne 0
+check "launch from the repo: pi.conf untouched" test "$(grep -c "$P5" "$P5/pi.conf")" = 1
 
 echo
 echo "$PASS passed, $FAIL failed"

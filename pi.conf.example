@@ -4,13 +4,14 @@
 #   cp pi.conf.example pi.conf
 # pi.sh auto-creates pi.conf from this example on first run if it is missing.
 
-# Allowed folders: the container sees ONLY these.
+# Allowed folders: the container sees ONLY these. Never list pi-sandbox itself
+# or a parent of it (~, ~/Workspace): the agent could rewrite pi.conf/pi.sh and
+# get them run on the host. pi.sh skips such entries.
 # - Launched from inside one → confined to that folder, mounted at its real
 #   path (pi's footer shows the actual location).
 # - Launched elsewhere and answering "n" → all mounted under $WORKSPACE/<name>.
 ALLOWED=(
   "$HOME/<your-project-path>"                       # e.g. ~/my-project
-  "$HOME/pi-sandbox"                # this repo, so launching from here confines to it
 )
 
 # Environment variables forwarded to the container (API keys, etc.)

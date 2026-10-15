@@ -5,6 +5,10 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- `pi.sh` never mounts the pi-sandbox repo or a folder containing it, even if
+  `ALLOWED` lists it: the agent could rewrite `pi.conf`/`pi.sh` and get them
+  executed on the host at the next launch. Launching from the repo itself is
+  refused, and the example config no longer lists the repo.
 - A folder list or key list written on one line (`ALLOWED=("/a" "/b")`) is
   now edited correctly. The launcher used to "add" the folder without writing
   it, then relaunch in an endless prompt loop, and `install.sh` reported a key
@@ -18,6 +22,10 @@ All notable changes to this project are documented here.
   gitignored `logs/` directory before the 30-day retention `find`, which used
   to fail on the missing directory and, under `set -e`, report an install that
   had actually succeeded as failed.
+
+### Added
+- Numerous unit tests for the launcher, the installer and the update script
+  (`test-pi-sandbox.sh`), runnable with `./test-pi-sandbox.sh` (no Docker, no network).
 
 ### Changed
 - `install.sh` and `update-pi-sandbox.sh` now read `IMAGE`, `VOLUME` and
