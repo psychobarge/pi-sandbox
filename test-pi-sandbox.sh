@@ -407,6 +407,19 @@ run_pi3 "$P3/allowed/proj" "$TMP/pi3-models.out"
 check "models.json is mounted read-only" \
   grep -qx "$P3/config/models.json:/root/.pi/agent/models.json:ro" "$TMP/docker.args"
 
+# ===== ~ in ALLOWED (pi.sh) ================================================
+# Bash does not expand ~ inside double quotes: "~/x" stayed a literal path that
+# never matched and was never mounted.
+P7="$TMP/pi7"; H7="$TMP/home7"; mkdir -p "$P7" "$H7/proj/sub"
+cp "$SRC/pi.sh" "$P7/"; cp "$P/pi.conf" "$P7/pi.conf"
+printf 'ALLOWED=("~/proj")\n' >> "$P7/pi.conf"
+printf '#!/bin/sh\nexit 0\n' > "$P7/update-pi-sandbox.sh"; chmod +x "$P7/update-pi-sandbox.sh"
+: > "$TMP/docker.args"
+( cd "$H7/proj/sub" && printf 'n\n' | HOME="$H7" PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P7/pi.sh" ) >"$TMP/pi7.out" 2>&1
+check "~ in ALLOWED: confines like \$HOME" grep -qF "Confined to: $H7/proj" "$TMP/pi7.out"
+( cd "$TMP/run0" && printf 'n\n' | HOME="$H7" PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P7/pi.sh" ) >"$TMP/pi7b.out" 2>&1
+check "~ in ALLOWED: fallback mount finds the folder" bash -c '! grep -q "folder not found" "$0"' "$TMP/pi7b.out"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]

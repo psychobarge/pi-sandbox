@@ -39,6 +39,7 @@ holds_repo() { case "$REPO/" in "$1"/*) return 0 ;; esac; return 1; }
 START_DIR=""
 START_REL=""
 for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
+  dir="${dir/#\~/$HOME}"   # "~/x" in quotes stays a literal ~
   dir="${dir%/}"   # a trailing slash would make the pattern `…/proj//*` never match
   holds_repo "$dir" && continue
   case "$LAUNCH_DIR" in
@@ -102,6 +103,7 @@ else
   echo "→ Mounting all allowed folders (add the folder to ALLOWED in pi.conf to confine)"
   ARGS=(); USED_NAMES=()
   for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
+    dir="${dir/#\~/$HOME}"
     dir="${dir%/}"
     holds_repo "$dir" && { echo "⚠ skipping $dir (contains pi-sandbox)"; continue; }
     [ -d "$dir" ] || { log_error "folder not found: $dir"; echo "⚠ folder not found: $dir"; continue; }

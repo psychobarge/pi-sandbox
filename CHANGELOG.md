@@ -5,6 +5,9 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- A leading `~` in an `ALLOWED` entry (`"~/proj"`) is now expanded to `$HOME`:
+  inside double quotes bash leaves it literal, so the folder never confined,
+  never mounted and was offered for addition again at every launch.
 - `config/models.json` is now bind-mounted read-only: a session could edit the
   repo's file on the host (provider, base URL) even when the repo was not in
   `ALLOWED`.
