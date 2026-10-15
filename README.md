@@ -43,20 +43,19 @@ What it does:
 
 1. Checks Docker and starts OrbStack if needed.
 2. Builds the pi image (Node 24, pi pinned at `1.0.0` — see `Dockerfile.pi`).
-3. Installs the model config into the `pi-agent-home` volume (no default
-   provider; thinking level `high`).
-4. Installs the predefined extensions (ponytail, pi-web-access,
-   pi-plan-mode, pi-ask-mode).
-5. Installs the **rtk** hook (compresses bash output, up to ~90% fewer input
+3. Seeds the model config into the `pi-agent-home` volume (no default
+   provider; thinking level `high`); pi installs the extensions that config
+   lists (ponytail, pi-web-access, pi-plan-mode, pi-ask-mode) on first launch.
+4. Installs the **rtk** hook (compresses bash output, up to ~90% fewer input
    tokens — re-installed by `update-pi-sandbox.sh` after an rtk bump) and creates
    the `rtk-data` volume so its history survives container recreation.
-6. Asks whether you want DeepSeek: `y` installs the `pi-deepseek-peak`
-   extension, restores the deepseek model defaults and adds
-   `DEEPSEEK_API_KEY` to `API_KEYS`.
-7. Offers to store the API keys in the macOS Keychain (hidden input — nothing
+5. Asks whether you want DeepSeek: `y` installs the `pi-deepseek-peak`
+   extension (listed in the deepseek config), restores the deepseek model
+   defaults and adds `DEEPSEEK_API_KEY` to `API_KEYS`.
+6. Offers to store the API keys in the macOS Keychain (hidden input — nothing
    in your shell history, nothing in `~/.zshrc`). `TAVILY_API_KEY` is always
    optional.
-8. Installs the `pi` launcher into `/usr/local/bin`.
+7. Installs the `pi` launcher into `/usr/local/bin`.
 
 Re-running `install.sh` rebuilds the image with the **same pinned version** and
 keeps your volume config: an existing `settings.json`, and the extensions you

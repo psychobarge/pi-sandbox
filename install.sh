@@ -4,14 +4,6 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# ====== Extensions to install ======
-EXTENSIONS=(
-  "npm:@dietrichgebert/ponytail"
-  "npm:pi-web-access"
-  "npm:@narumitw/pi-plan-mode"
-  "npm:pi-ask-mode"
-)
-
 # ====== 1. Check Docker (OrbStack or Docker Desktop) ======
 if ! command -v docker >/dev/null 2>&1; then
   echo "❌ docker not found."
@@ -58,13 +50,9 @@ docker run --rm \
      cp /config/settings.json /root/.pi/agent/ && echo "✓ Model config installed"
    fi'
 
-# ====== 4. Extensions (into the persistent pi-agent-home volume) ======
-echo "→ Installing extensions…"
-for ext in "${EXTENSIONS[@]}"; do
-  echo "   • $ext"
-  docker run --rm -v pi-agent-home:/root/.pi/agent pi-sandbox install "$ext"
-done
-echo "✓ Extensions installed"
+# ====== 4. Extensions ======
+# pi installs the packages declared in config/settings*.json on first launch
+# (settings.json was seeded in step 3), so the list lives only there.
 
 # ====== 5. rtk hook (global pi extension, into the persistent volume) ======
 echo "→ Installing rtk pi extension (compresses bash output for the agent)…"
@@ -82,9 +70,7 @@ printf "Add DeepSeek support (pi-deepseek-peak extension + deepseek model defaul
 read -r want_deepseek || true
 case "$want_deepseek" in
   y|Y|yes|YES)
-    echo "→ Installing pi-deepseek-peak…"
-    docker run --rm -v pi-agent-home:/root/.pi/agent pi-sandbox install "npm:pi-deepseek-peak"
-    echo "→ Installing deepseek model config…"
+    echo "→ Installing deepseek model config (pi installs pi-deepseek-peak from it)…"
     docker run --rm \
       -v pi-agent-home:/root/.pi/agent \
       -v "$(pwd)/config:/config:ro" \
