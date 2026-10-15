@@ -52,6 +52,9 @@ All notable changes to this project are documented here.
   (`test-pi-sandbox.sh`), runnable with `./test-pi-sandbox.sh` (no Docker, no network).
 
 ### Changed
+- `pi.sh` passes the launch folder straight to `-w` instead of rebuilding it
+  from the allowed folder; the old unquoted pattern gave a wrong workdir for
+  paths containing `[` or `*`.
 - `install.sh` and `update-pi-sandbox.sh` now read `IMAGE`, `VOLUME` and
   `RTK_VOLUME` from `pi.conf` — the same file `pi.sh` reads — instead of
   hardcoding `pi-sandbox`/`pi-agent-home`/`rtk-data`. Renaming them used to

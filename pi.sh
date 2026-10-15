@@ -37,17 +37,13 @@ holds_repo() { case "$REPO/" in "$1"/*) return 0 ;; esac; return 1; }
 
 # Are we inside an allowed folder? If so, confine to it.
 START_DIR=""
-START_REL=""
 for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
   dir="${dir/#\~/$HOME}"   # "~/x" in quotes stays a literal ~
   dir="${dir%/}"   # a trailing slash would make the pattern `…/proj//*` never match
   holds_repo "$dir" && continue
   case "$LAUNCH_DIR" in
     "$dir"|"$dir"/*)
-      START_DIR="$dir"
-      START_REL="${LAUNCH_DIR#$dir/}"
-      [ "$START_REL" = "$LAUNCH_DIR" ] && START_REL=""
-      break
+      START_DIR="$dir"; break
       ;;
   esac
 done
@@ -78,8 +74,7 @@ if [ -n "$START_DIR" ]; then
   # Mount at the folder's real host path so pi's footer shows the actual
   # location (e.g. ~/My_workspace/My_projects/pi-sandbox (main)), not a generic /workspace.
   ARGS=(-v "$START_DIR:$START_DIR")
-  [ -n "$START_REL" ] && WORKDIR_ARGS=(-w "$START_DIR/$START_REL") \
-                     || WORKDIR_ARGS=(-w "$START_DIR")
+  WORKDIR_ARGS=(-w "$LAUNCH_DIR")
 else
   holds_repo "$LAUNCH_DIR" && { echo "❌ refusing to mount $LAUNCH_DIR: it contains pi-sandbox itself"; exit 1; }
   echo "⚠ $LAUNCH_DIR is not in ALLOWED (pi.conf)"
