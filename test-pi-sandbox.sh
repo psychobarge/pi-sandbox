@@ -410,6 +410,18 @@ cp "$P6/pi.conf" "$TMP/pi6.conf.orig"
 check "unsafe launch path: refused" grep -q 'add it to pi.conf by hand' "$TMP/pi6.out"
 check "unsafe launch path: pi.conf unchanged" cmp -s "$P6/pi.conf" "$TMP/pi6.conf.orig"
 
+# ===== secrets stay out of docker's argv (pi.sh) ===========================
+# pi.sh passes `-e NAME`, never `-e NAME=value`, so keys stay out of `ps`.
+P8="$TMP/pi8"; mkdir -p "$P8"
+cp "$SRC/pi.sh" "$P8/"; sed 's/^API_KEYS=()/API_KEYS=(TEST_SECRET_KEY)/' "$P/pi.conf" > "$P8/pi.conf"
+printf '#!/bin/sh\nexit 0\n' > "$P8/update-pi-sandbox.sh"; chmod +x "$P8/update-pi-sandbox.sh"
+: > "$TMP/docker.args"
+( cd "$TMP/run0" && printf 'n\n' | TEST_SECRET_KEY=s3cr3t-value PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P8/pi.sh" ) >"$TMP/pi8.out" 2>&1
+check "API key is forwarded by name only (-e NAME)" \
+  bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx TEST_SECRET_KEY' "$TMP/docker.args"
+check "API key value never reaches docker's arguments" \
+  bash -c '! grep -q "s3cr3t" "$0"' "$TMP/docker.args"
+
 # ===== models.json mount (pi.sh) ===========================================
 # Without :ro any session could edit the repo's models.json on the host, even
 # when the repo is not in ALLOWED.
