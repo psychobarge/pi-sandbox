@@ -158,6 +158,10 @@ check "install.sh repoints a stale launcher symlink" \
 # `find logs` errored and `set -e` returned 1 after install.sh had done its work.
 check "install.sh creates logs before the retention find" \
   bash -c 'grep -B1 "find logs -name" "$1" | grep -q "mkdir -p logs"' _ "$SRC/install.sh"
+# A failing `security add-generic-password` (locked keychain, SSH) was the last
+# command of store_key: under set -e it stopped install.sh before the launcher.
+check "install.sh survives a failed Keychain write" \
+  bash -c 'grep -A1 "security add-generic-password -U -s \"\$KEYCHAIN_SERVICE\" -a \"\$name\" -w" "$1" | grep -q "|| echo"' _ "$SRC/install.sh"
 
 CONF="$TMP/conf"; mkdir -p "$CONF"; cp "$SRC/pi.conf.example" "$CONF/pi.conf"
 apply_edit() {  # mirrors install.sh: grep guard, mktemp, mv

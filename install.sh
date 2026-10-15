@@ -119,7 +119,9 @@ store_key() {
     y|Y|yes|YES)
       # -w last: security prompts for the value (hidden input), so it never
       # reaches argv, the shell history, or a file.
-      security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$name" -w ;;
+      # a failure (locked keychain, SSH session) must not abort the install under set -e
+      security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$name" -w \
+        || echo "  ❌ could not store $name — add it later: security add-generic-password -U -s $KEYCHAIN_SERVICE -a $name -w" ;;
     *)
       echo "  ℹ  later: security add-generic-password -U -s $KEYCHAIN_SERVICE -a $name -w" ;;
   esac

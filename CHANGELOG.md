@@ -5,6 +5,9 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Fixed
+- `install.sh` no longer stops silently when the Keychain write fails (locked
+  keychain, SSH session): under `set -e` that aborted the install before the
+  `pi` launcher was created. It now prints how to add the key later and goes on.
 - A leading `~` in an `ALLOWED` entry (`"~/proj"`) is now expanded to `$HOME`:
   inside double quotes bash leaves it literal, so the folder never confined,
   never mounted and was offered for addition again at every launch.
