@@ -79,12 +79,10 @@ else
   read -r answer || true
   case "$answer" in
     y|Y|yes|YES)
-      awk -v dir="$LAUNCH_DIR" '
-        /^ALLOWED=\(/ { in_block=1 }
-        in_block && index($0, "\"" dir "\"") { found=1 }
-        in_block && /^\)/ { if (!found) printf "  \"%s\"\n", dir; in_block=0 }
-        { print }
-      ' pi.conf > pi.conf.tmp && mv pi.conf.tmp pi.conf
+      # Shared paren-aware parser: a one-line list has no line starting with
+      # ")", which the old `^\)` match missed (folder looked added but wasn't).
+      awk -v array=ALLOWED -v entry="\"$LAUNCH_DIR\"" \
+        -f append-array-entry.awk pi.conf > pi.conf.tmp && mv pi.conf.tmp pi.conf
       echo "✓ Added to ALLOWED (pi.conf), relaunching…"
       cd "$LAUNCH_DIR"
       exec "$SCRIPT"

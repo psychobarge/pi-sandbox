@@ -128,8 +128,12 @@ check "duplicate basenames: both folders are mounted" bash -c '
   grep -q ":/workspace/api$" "$0" && grep -q ":/workspace/api-2$" "$0"' "$TMP/docker.args"
 
 # ===== pi.conf edit (install.sh) ===========================================
-AWK_PROG="$(sed -n "s/.*awk '\(.*\)' pi.conf.*/\1/p" "$SRC/install.sh" | head -1)"
-check "awk program found in install.sh" test -n "$AWK_PROG"
+AWK_PROG="$SRC/append-array-entry.awk"
+check "array-append awk helper present" test -f "$AWK_PROG"
+check "pi.sh uses the shared append helper" \
+  grep -q 'append-array-entry.awk' "$SRC/pi.sh"
+check "install.sh uses the shared append helper" \
+  grep -q 'append-array-entry.awk' "$SRC/install.sh"
 check "pi.conf creation guard present in install.sh" \
   grep -q '\[ -f pi.conf \] || cp pi.conf.example pi.conf' "$SRC/install.sh"
 check "install.sh repoints a stale launcher symlink" \
@@ -140,7 +144,7 @@ apply_edit() {  # mirrors install.sh: grep guard, mktemp, mv
   ( cd "$CONF" || exit 1
     grep -q '^  DEEPSEEK_API_KEY$' pi.conf && exit 0
     t="$(mktemp)"
-    if awk "$AWK_PROG" pi.conf > "$t"; then mv "$t" pi.conf; else rm -f "$t"; exit 1; fi )
+    if awk -v array=API_KEYS -v entry=DEEPSEEK_API_KEY -f "$AWK_PROG" pi.conf > "$t"; then mv "$t" pi.conf; else rm -f "$t"; exit 1; fi )
 }
 in_api_keys() {
   awk '/^API_KEYS=\(/ { f=1; next } f && /^\)/ { f=0 } f && /^  DEEPSEEK_API_KEY$/ { found=1 } END { exit found ? 0 : 1 }' "$CONF/pi.conf"
@@ -153,10 +157,33 @@ check "second run is idempotent" test "$(grep -c '^  DEEPSEEK_API_KEY$' "$CONF/p
 check "no leftover temp file in the directory" test "$(ls -A "$CONF")" = "pi.conf"
 
 CONF2="$TMP/conf2"; mkdir -p "$CONF2"; cp "$SRC/pi.conf.example" "$CONF2/pi.conf.example"
-( cd "$CONF2" && awk "$AWK_PROG" pi.conf > "$TMP/out" ) 2>/dev/null; awk_status=$?
+( cd "$CONF2" && awk -v array=API_KEYS -v entry=DEEPSEEK_API_KEY -f "$AWK_PROG" pi.conf > "$TMP/out" ) 2>/dev/null; awk_status=$?
 check "missing pi.conf: awk fails" test "$awk_status" -ne 0
 check "missing pi.conf: no output written" test ! -s "$TMP/out"
 check "missing pi.conf: no file created" test "$(ls -A "$CONF2")" = "pi.conf.example"
+
+# A list written on one line has no line starting with ")". The old parser
+# matched `^\)`, so it printed the file unchanged and exited 0: the launcher
+# then "added" the folder, relaunched and looped forever.
+printf 'ALLOWED=("/a" "/b")\n' > "$TMP/one-line.conf"
+awk -v array=ALLOWED -v entry='\"/new\"' -f "$AWK_PROG" "$TMP/one-line.conf" > "$TMP/one-line.out"
+check "one-line list: entry appended inside the array" \
+  bash -c '. "$1"; [ "${ALLOWED[*]}" = "/a /b /new" ]' _ "$TMP/one-line.out"
+printf 'ALLOWED=()\n' > "$TMP/empty-line.conf"
+awk -v array=ALLOWED -v entry='\"/new\"' -f "$AWK_PROG" "$TMP/empty-line.conf" > "$TMP/empty-line.out"
+check "one-line empty list: entry appended inside the array" \
+  bash -c '. "$1"; [ "${ALLOWED[*]}" = "/new" ]' _ "$TMP/empty-line.out"
+# A ")" in a quoted path must not be taken for the closing paren (a plain
+# "match ) anywhere" fix would corrupt the list).
+printf 'ALLOWED=(\n  "/a (old)"\n)\n' > "$TMP/paren.conf"
+awk -v array=ALLOWED -v entry='\"/new\"' -f "$AWK_PROG" "$TMP/paren.conf" > "$TMP/paren.out"
+check "paren inside a quoted path is not the array end" \
+  bash -c '. "$1"; [ "${ALLOWED[*]}" = "/a (old) /new" ]' _ "$TMP/paren.out"
+# Re-adding a folder that is already in a one-line list must not duplicate it.
+printf 'ALLOWED=("/new" "/b")\n' > "$TMP/dup.conf"
+awk -v array=ALLOWED -v entry='\"/new\"' -f "$AWK_PROG" "$TMP/dup.conf" > "$TMP/dup.out"
+check "one-line list: an entry already there is not duplicated" \
+  bash -c '. "$1"; [ "${ALLOWED[*]}" = "/new /b" ]' _ "$TMP/dup.out"
 
 # ===== DeepSeek settings merge (config/merge-deepseek-settings.py) =========
 # Answering yes to DeepSeek must not drop extensions the user installed with

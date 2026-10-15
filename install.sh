@@ -82,7 +82,7 @@ case "$want_deepseek" in
     [ -f pi.conf ] || cp pi.conf.example pi.conf
     if ! grep -q '^  DEEPSEEK_API_KEY$' pi.conf; then
       tmp="$(mktemp)"
-      if awk '/^API_KEYS=\(/ { in_block=1 } in_block && /^\)/ { print "  DEEPSEEK_API_KEY"; in_block=0 } { print }' pi.conf > "$tmp"; then
+      if awk -v array=API_KEYS -v entry=DEEPSEEK_API_KEY -f append-array-entry.awk pi.conf > "$tmp"; then
         mv "$tmp" pi.conf
         echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
       else
