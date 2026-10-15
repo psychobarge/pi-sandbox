@@ -128,7 +128,7 @@ if docker image inspect "${IMAGE}" >/dev/null 2>&1; then
       ;;
   esac
 else
-  echo "→ Image ${IMAGE} absente, construction…"
+  echo "→ Image ${IMAGE} not found, building…"
   "$UPDATER" || true
 fi
 
