@@ -172,4 +172,7 @@ echo "  1. Edit pi.conf (allowed folders):  nano pi.conf"
 echo "  2. cd into one of the allowed folders, then:  pi"
 
 # ====== Retention: keep 30 days ======
+# logs/ is gitignored and only pi.sh creates it, so on a fresh clone the find
+# used to error and `set -e` made the whole install return 1 after it succeeded.
+mkdir -p logs
 find logs -name '*.log' -mtime +30 -delete

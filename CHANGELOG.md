@@ -14,6 +14,10 @@ All notable changes to this project are documented here.
   `settings.json`: `install.sh` merges the DeepSeek defaults into it instead of
   copying the file over, so extensions added with `!pi install` survive
   (`config/merge-deepseek-settings.py`).
+- `install.sh` no longer ends in an error on a fresh clone: it creates the
+  gitignored `logs/` directory before the 30-day retention `find`, which used
+  to fail on the missing directory and, under `set -e`, report an install that
+  had actually succeeded as failed.
 
 ### Changed
 - `install.sh` and `update-pi-sandbox.sh` now read `IMAGE`, `VOLUME` and

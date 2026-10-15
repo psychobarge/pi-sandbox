@@ -149,6 +149,10 @@ check "pi.conf creation guard present in install.sh" \
   grep -q '\[ -f pi.conf \] || cp pi.conf.example pi.conf' "$SRC/install.sh"
 check "install.sh repoints a stale launcher symlink" \
   grep -qF '[ -L "$LAUNCHER" ] && [ "$(readlink "$LAUNCHER")" != "$TARGET" ]' "$SRC/install.sh"
+# logs/ is gitignored and only pi.sh creates it; on a fresh clone the retention
+# `find logs` errored and `set -e` returned 1 after install.sh had done its work.
+check "install.sh creates logs before the retention find" \
+  bash -c 'grep -B1 "find logs -name" "$1" | grep -q "mkdir -p logs"' _ "$SRC/install.sh"
 
 CONF="$TMP/conf"; mkdir -p "$CONF"; cp "$SRC/pi.conf.example" "$CONF/pi.conf"
 apply_edit() {  # mirrors install.sh: grep guard, mktemp, mv
