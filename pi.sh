@@ -33,7 +33,7 @@ source ./pi.conf
 # Are we inside an allowed folder? If so, confine to it.
 START_DIR=""
 START_REL=""
-for dir in "${ALLOWED[@]}"; do
+for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
   case "$LAUNCH_DIR" in
     "$dir"|"$dir"/*)
       START_DIR="$dir"
@@ -49,7 +49,7 @@ done
 # shell wins, so you can still override one key for a single launch.
 KEYCHAIN_SERVICE="pi-sandbox"
 ENV_ARGS=()
-for k in "${API_KEYS[@]}"; do
+for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
   v="${!k:-}"
   if [ -z "$v" ] && command -v security >/dev/null 2>&1; then
     v="$(security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$k" -w 2>/dev/null)" || v=""
@@ -90,7 +90,7 @@ else
   esac
   echo "→ Mounting all allowed folders (add the folder to ALLOWED in pi.conf to confine)"
   ARGS=()
-  for dir in "${ALLOWED[@]}"; do
+  for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
     [ -d "$dir" ] || { log_error "folder not found: $dir"; echo "⚠ folder not found: $dir"; exit 1; }
     ARGS+=(-v "$dir:${WORKSPACE}/$(basename "$dir")")
   done
@@ -134,7 +134,7 @@ docker run --rm -it \
   -e XDG_CACHE_HOME=/root/.pi/agent/cache \
   ${MODELS_ARGS[@]+"${MODELS_ARGS[@]}"} \
   -v "${RTK_VOLUME}:/root/.local/share/rtk" \
-  "${ARGS[@]}" \
+  ${ARGS[@]+"${ARGS[@]}"} \
   "${WORKDIR_ARGS[@]}" \
   ${DOCKER_ARGS[@]+"${DOCKER_ARGS[@]}"} \
   "${IMAGE}" || code=$?

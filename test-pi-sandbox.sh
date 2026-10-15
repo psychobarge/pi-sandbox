@@ -65,6 +65,32 @@ else
   echo "SKIP live-lock case (no ps and no /proc on this machine)"
 fi
 
+# ===== empty ALLOWED / API_KEYS (pi.sh) ====================================
+# macOS ships bash 3.2, where "${empty[@]}" under `set -u` is an unbound
+# variable. Run the launcher for real with both lists empty and a stubbed
+# docker: it must reach `docker run` instead of dying on the first loop.
+P="$TMP/pi"; mkdir -p "$P"; cp "$SRC/pi.sh" "$P/"
+cat > "$P/pi.conf" <<'EOF'
+ALLOWED=()
+API_KEYS=()
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+RTK_VOLUME="rtk-data"
+WORKSPACE="/workspace"
+DOCKER_ARGS=()
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$P/update-pi-sandbox.sh"; chmod +x "$P/update-pi-sandbox.sh"
+printf 'n\n' | ( cd "$P" && PATH="$STUB:$PATH" "$P/pi.sh" ) >"$TMP/pi.out" 2>&1
+check "empty ALLOWED/API_KEYS: launcher starts" test $? -eq 0
+check "empty ALLOWED/API_KEYS: no unbound-variable error" \
+  bash -c '! grep -q "unbound variable" "$0"' "$TMP/pi.out"
+# bash 3.2 is the real target and this machine may not have it, so also assert
+# statically that every list that can be empty is expanded with the guard.
+check "every emptyable array in pi.sh is expanded with the guard" bash -c '
+  for v in API_KEYS ALLOWED ARGS ENV_ARGS MODELS_ARGS DOCKER_ARGS; do
+    [ "$(grep -c "\"\${$v\[@\]}\"" "$1")" = "$(grep -c "\${$v\[@\]+" "$1")" ] || exit 1
+  done' _ "$SRC/pi.sh"
+
 # ===== pi.conf edit (install.sh) ===========================================
 AWK_PROG="$(sed -n "s/.*awk '\(.*\)' pi.conf.*/\1/p" "$SRC/install.sh" | head -1)"
 check "awk program found in install.sh" test -n "$AWK_PROG"
