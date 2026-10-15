@@ -42,7 +42,7 @@ Any Docker engine works (OrbStack or Docker Desktop):
 What it does:
 
 1. Checks Docker and starts OrbStack if needed.
-2. Builds the pi image (Node 24, pi pinned at `1.0.0` — see `Dockerfile.pi`).
+2. Builds the pi image (Node 24, pi and rtk pinned — see `Dockerfile.pi`).
 3. Seeds the model config into the `pi-agent-home` volume (no default
    provider; thinking level `high`); pi installs the extensions that config
    lists (ponytail, pi-web-access, pi-plan-mode, pi-ask-mode) on first launch.
