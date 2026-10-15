@@ -19,6 +19,7 @@ while [ -L "$SCRIPT" ]; do
 done
 cd "$(dirname "$SCRIPT")"
 DIR="$(pwd)"
+LOCK="${PI_UPDATE_LOCK:-/tmp/pi-sandbox-update.lock}"
 
 pi_latest_version() {
   curl -fsS --max-time 5 "$PI_LATEST_URL" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
@@ -43,6 +44,18 @@ image_rtk_version() {
 
 docker_ok() {
   docker version --format '{{.Server.Version}}' >/dev/null 2>&1
+}
+
+# A lock is live only if its PID is still running and really is the updater.
+# An EXIT trap does not run on SIGKILL or reboot, so a leftover lock is
+# reclaimed instead of disabling auto-update forever.
+lock_is_live() {
+  local pid
+  [ -f "$LOCK/pid" ] || return 1
+  pid="$(cat "$LOCK/pid" 2>/dev/null)" || return 1
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  ps -p "$pid" -o command= 2>/dev/null | grep -q 'update-pi-sandbox' || return 1
 }
 
 # "pi v1.2.3 + rtk v1.0.0" for whatever is stale, or empty when all is current.
@@ -73,8 +86,18 @@ rebuild() {
   lr="$(rtk_latest_version || true)"; ir="$(image_rtk_version)"
 
   # lock: one rebuild at a time (macOS has no flock by default)
-  mkdir /tmp/pi-sandbox-update.lock 2>/dev/null || exit 0
-  trap 'rmdir /tmp/pi-sandbox-update.lock 2>/dev/null || true' EXIT
+  if lock_is_live; then
+    echo "[$(date '+%F %T')] rebuild already running (pid $(cat "$LOCK/pid")), skip" >> "$LOG"
+    exit 0
+  fi
+  if [ -d "$LOCK" ]; then
+    rm -f "$LOCK/pid"
+    rmdir "$LOCK" 2>/dev/null || true
+    echo "[$(date '+%F %T')] removed stale update lock" >> "$LOG"
+  fi
+  mkdir "$LOCK" 2>/dev/null || { echo "[$(date '+%F %T')] lock $LOCK not acquired, skip" >> "$LOG"; exit 0; }
+  echo $$ > "$LOCK/pid"
+  trap 'rm -f "$LOCK/pid"; rmdir "$LOCK" 2>/dev/null || true' EXIT
 
   # Bump the pins (busts the docker/npm layer cache) then rebuild.
   # On build failure a pin stays bumped, but next launch compares against the

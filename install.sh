@@ -83,9 +83,17 @@ case "$want_deepseek" in
       -v "$(pwd)/config:/config:ro" \
       --entrypoint bash pi-sandbox -c \
       'cp -f /config/settings.deepseek.json /root/.pi/agent/settings.json && echo "✓ DeepSeek model config installed"'
+    # pi.sh creates pi.conf on first launch; install.sh may run first.
+    [ -f pi.conf ] || cp pi.conf.example pi.conf
     if ! grep -q '^  DEEPSEEK_API_KEY$' pi.conf; then
-      awk '/^API_KEYS=\(/ { in_block=1 } in_block && /^\)/ { print "  DEEPSEEK_API_KEY"; in_block=0 } { print }' pi.conf > pi.conf.tmp && mv pi.conf.tmp pi.conf
-      echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
+      tmp="$(mktemp)"
+      if awk '/^API_KEYS=\(/ { in_block=1 } in_block && /^\)/ { print "  DEEPSEEK_API_KEY"; in_block=0 } { print }' pi.conf > "$tmp"; then
+        mv "$tmp" pi.conf
+        echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
+      else
+        rm -f "$tmp"
+        echo "❌ Failed to add DEEPSEEK_API_KEY to pi.conf"
+      fi
     fi
     DEEPSEEK_OPTED=1
     ;;
