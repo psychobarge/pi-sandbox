@@ -44,12 +44,19 @@ echo "✓ rtk-data volume ready"
 # ====== 3. Model & thinking config (settings.json) ======
 # No default provider/model: pi asks on first run. DeepSeek is added
 # later only if the user opts in at the end of this script.
+# Seed a fresh volume only: re-running must not wipe packages the user
+# installed with `!pi install` (they live in this same settings.json).
 echo "→ Installing model config (no default provider, pi asks on first run)…"
 docker run --rm \
   -v pi-agent-home:/root/.pi/agent \
   -v "$(pwd)/config:/config:ro" \
   --entrypoint bash pi-sandbox -c \
-  'mkdir -p /root/.pi/agent && cp -f /config/settings.json /root/.pi/agent/ && echo "✓ Model config installed"'
+  'mkdir -p /root/.pi/agent
+   if [ -f /root/.pi/agent/settings.json ]; then
+     echo "✓ Model config kept (existing extensions preserved)"
+   else
+     cp /config/settings.json /root/.pi/agent/ && echo "✓ Model config installed"
+   fi'
 
 # ====== 4. Extensions (into the persistent pi-agent-home volume) ======
 echo "→ Installing extensions…"

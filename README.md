@@ -59,7 +59,8 @@ What it does:
 8. Installs the `pi` launcher into `/usr/local/bin`.
 
 Re-running `install.sh` rebuilds the image with the **same pinned version** and
-resets the volume config. It does **not** update pi — updates happen at launch
+keeps your volume config: an existing `settings.json`, and the extensions you
+added to it, are left alone. It does **not** update pi — updates happen at launch
 (see below).
 
 ## Configuration
