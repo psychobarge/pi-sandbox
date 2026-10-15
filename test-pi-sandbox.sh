@@ -132,6 +132,8 @@ AWK_PROG="$(sed -n "s/.*awk '\(.*\)' pi.conf.*/\1/p" "$SRC/install.sh" | head -1
 check "awk program found in install.sh" test -n "$AWK_PROG"
 check "pi.conf creation guard present in install.sh" \
   grep -q '\[ -f pi.conf \] || cp pi.conf.example pi.conf' "$SRC/install.sh"
+check "install.sh repoints a stale launcher symlink" \
+  grep -qF '[ -L "$LAUNCHER" ] && [ "$(readlink "$LAUNCHER")" != "$TARGET" ]' "$SRC/install.sh"
 
 CONF="$TMP/conf"; mkdir -p "$CONF"; cp "$SRC/pi.conf.example" "$CONF/pi.conf"
 apply_edit() {  # mirrors install.sh: grep guard, mktemp, mv

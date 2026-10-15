@@ -138,8 +138,14 @@ fi
 
 # ====== 8. Launcher in PATH ======
 LAUNCHER="/usr/local/bin/pi"
+TARGET="$(pwd)/pi.sh"
+# A moved or re-cloned repo leaves a dangling symlink; [ ! -e ] is then true and
+# ln -s fails with "File exists". Repoint a stale link instead.
+if [ -L "$LAUNCHER" ] && [ "$(readlink "$LAUNCHER")" != "$TARGET" ]; then
+  rm -f "$LAUNCHER" 2>/dev/null || true
+fi
 if [ ! -e "$LAUNCHER" ]; then
-  if ln -s "$(pwd)/pi.sh" "$LAUNCHER" 2>/dev/null; then
+  if ln -s "$TARGET" "$LAUNCHER" 2>/dev/null; then
     echo "✓ Launcher installed: $LAUNCHER"
     echo "   → run \"pi\" from any allowed folder"
   else
@@ -148,7 +154,7 @@ if [ ! -e "$LAUNCHER" ]; then
     printf "${ORANGE}⚠ Could not create %s${RESET}\n" "$LAUNCHER"
     echo "   This installs the \"pi\" shortcut (a symlink) so you can"
     echo "   launch pi from any allowed folder. Run this manually:"
-    echo "   sudo ln -s $(pwd)/pi.sh /usr/local/bin/pi"
+    echo "   sudo ln -s $TARGET $LAUNCHER"
   fi
 else
   echo "ℹ️  $LAUNCHER already exists, skipping."
