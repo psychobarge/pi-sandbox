@@ -2,40 +2,10 @@
 
 All notable changes to this project are documented here.
 
-## [0.2.2] — 2026-10-14
+## [1.0.0] — 2026-10-15
 
-### Updated
-- **rtk** bumped `0.44.2` → `1.0.0` in `Dockerfile.pi`. Default edition kept
-  (Apache-2.0 + BUSL-1.1, compression engine included; `rtk-oss` is the engine-less
-  Apache-2.0 build). Asset names and the history path
-  (`~/.local/share/rtk/history.db`) are unchanged.
-- `update-pi-sandbox.sh` now follows pi **and** rtk: it compares the versions
-  baked into the image against pi.dev and the latest rtk GitHub release, bumps
-  the matching pin and rebuilds once. After an rtk bump it also re-installs the
-  pi hook (`rtk init -g --agent pi --auto-patch`) — the extension file is an
-  rtk-generated template and changed in 1.0.0.
-- `pi.sh` announces the update with the pi/rtk label instead of pi only.
-
-> Migration: run `./update-pi-sandbox.sh` once (rebuild + hook refresh), or
-> `./install.sh`. A bare `docker build` refreshes the binary but not the hook.
-
-> Upstream breaking changes with no impact on this repo: `rtk proxy` is now
-> `rtk bypass` (old name kept as an alias), `--ultra-compact` removed, `rtk gain`
-> excludes oversized outputs from its headline rate. Neither flag/command is
-> used here.
-
-## [0.2.1] — 2026-10-14
-
-### Added
-- Python 3.13 in the image (`python3`, `python`, `pip`, `venv` from Debian
-  trixie) — for the agent's throwaway helper scripts, not for running a
-  project's dependencies.
-
-> The image is **not** rebuilt automatically for this: `update-pi-sandbox.sh`
-> only rebuilds when a newer pi release exists. Run
-> `docker build -t pi-sandbox -f Dockerfile.pi .` (or `./install.sh`) once.
-
-## [0.2.0] - 2026-10-14
+First stable release. Covers everything since 0.1.1; the intermediate 0.1.2,
+0.2.0, 0.2.1 and 0.2.2 drafts were never published.
 
 ### Changed
 - **Breaking**: API keys no longer live in `~/.zshrc`. `pi.sh` reads them from
@@ -47,22 +17,38 @@ All notable changes to this project are documented here.
   `security add-generic-password -U -s pi-sandbox -a DEEPSEEK_API_KEY -w "$(security find-generic-password -s deepseek-api-key -a "$USER" -w)"`
   (same for `TAVILY_API_KEY`/`tavily-api-key`), then delete the old items and
   the `export` lines in `~/.zshrc`.
+  Alternatively, re-run `./install.sh` for each key.
 - `install.sh` stores the keys in the Keychain with a hidden prompt instead of
   printing `export` lines for the shell rc (nothing in the history, nothing in
   `ps`, no file on disk).
-
-## [0.1.2] — 2026-10-02
-
-### Updated
-- pi bumped to `1.0.4` in `Dockerfile.pi` (auto-update via
-  `update-pi-sandbox.sh`).
+- `pi.sh` announces updates with the pi/rtk label instead of pi only.
 - DeepSeek model defaults moved to the ids the built-in pi provider actually
   serves (`deepseek-flash`); `deepseek-v4-flash` is retired upstream.
 - `ponytail` and `pi-deepseek-peak` now install from npm
   (`npm:@dietrichgebert/ponytail`, `npm:pi-deepseek-peak`) instead of their
   git URLs, in `install.sh` and both `config/settings*.json`.
+- The tracked `pi.conf` is gone: it held personal folder paths and had leaked
+  them through history. `pi.conf` is now gitignored, `pi.conf.example` ships as
+  the template, and `pi.sh` recreates `pi.conf` from the example when missing.
+  Existing installs keep their local `pi.conf` untouched.
 
 ### Added
+- Python 3.13 in the image (`python3`, `python`, `pip`, `venv` from Debian
+  trixie) — for the agent's throwaway helper scripts, not for running a
+  project's dependencies.
+- `update-pi-sandbox.sh` now follows pi **and** rtk: it compares the versions
+  baked into the image against pi.dev and the latest rtk GitHub release, bumps
+  the matching pin and rebuilds once. After an rtk bump it also re-installs the
+  pi hook (`rtk init -g --agent pi --auto-patch`) — the extension file is an
+  rtk-generated template and changed in rtk 1.0.0.
+
+### Updated
+- **rtk** bumped `0.44.2` → `1.0.0` in `Dockerfile.pi`. Default edition kept
+  (Apache-2.0 + BUSL-1.1, compression engine included; `rtk-oss` is the engine-less
+  Apache-2.0 build). Asset names and the history path
+  (`~/.local/share/rtk/history.db`) are unchanged.
+- pi bumped to `1.0.4` in `Dockerfile.pi` (auto-update via
+  `update-pi-sandbox.sh`).
 - `pi.sh` sets `XDG_CACHE_HOME` into the `pi-agent-home` volume: tool caches
   would otherwise be re-downloaded on every launch (ephemeral container).
 - `pi.sh` bind-mounts `config/models.json` at launch. It now holds only the
@@ -74,6 +60,15 @@ All notable changes to this project are documented here.
 ### Removed
 - `hideThinkingBlock` (pi's default) and `lastChangelogVersion` (pi-managed)
   from the settings templates.
+
+> Migration: run `./update-pi-sandbox.sh` once (rebuild + hook refresh), or
+> `./install.sh`. A bare `docker build` refreshes the binaries but not the hook.
+> Python is only picked up by an image rebuild.
+
+> Upstream breaking changes with no impact on this repo: `rtk proxy` is now
+> `rtk bypass` (old name kept as an alias), `--ultra-compact` removed, `rtk gain`
+> excludes oversized outputs from its headline rate. Neither flag/command is
+> used here.
 
 ## [0.1.1] — 2026-08-24
 
