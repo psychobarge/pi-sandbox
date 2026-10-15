@@ -89,10 +89,17 @@ else
       ;;
   esac
   echo "→ Mounting all allowed folders (add the folder to ALLOWED in pi.conf to confine)"
-  ARGS=()
+  ARGS=(); USED_NAMES=()
   for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
     [ -d "$dir" ] || { log_error "folder not found: $dir"; echo "⚠ folder not found: $dir"; continue; }
-    ARGS+=(-v "$dir:${WORKSPACE}/$(basename "$dir")")
+    # two allowed folders can share a basename: Docker would silently keep only
+    # one mount, so later ones get a suffix (api, api-2) and both stay visible
+    name="$(basename "$dir")"; n=1
+    while printf '%s\n' ${USED_NAMES[@]+"${USED_NAMES[@]}"} | grep -qxF "$name"; do
+      n=$((n + 1)); name="$(basename "$dir")-$n"
+    done
+    USED_NAMES+=("$name")
+    ARGS+=(-v "$dir:${WORKSPACE}/$name")
   done
   WORKDIR_ARGS=(-w "$WORKSPACE")
 fi

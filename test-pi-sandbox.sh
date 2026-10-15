@@ -91,6 +91,33 @@ check "every emptyable array in pi.sh is expanded with the guard" bash -c '
     [ "$(grep -c "\"\${$v\[@\]}\"" "$1")" = "$(grep -c "\${$v\[@\]+" "$1")" ] || exit 1
   done' _ "$SRC/pi.sh"
 
+# ===== duplicate basenames (pi.sh) ========================================
+# Two allowed folders named `api` used to give one container target, so Docker
+# dropped one mount. Both must now be mounted, the second under a suffix.
+P2="$TMP/pi2"; mkdir -p "$P2/a/api" "$P2/b/api" "$P2/run"
+cp "$SRC/pi.sh" "$P2/"
+cat > "$P2/pi.conf" <<EOF
+ALLOWED=("$P2/a/api" "$P2/b/api")
+API_KEYS=()
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+RTK_VOLUME="rtk-data"
+WORKSPACE="/workspace"
+DOCKER_ARGS=()
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$P2/update-pi-sandbox.sh"; chmod +x "$P2/update-pi-sandbox.sh"
+STUB2="$TMP/stub2"; mkdir -p "$STUB2"
+cat > "$STUB2/docker" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$@" >> "$ARGS_LOG"
+exit 0
+STUB
+chmod +x "$STUB2/docker"
+: > "$TMP/docker.args"
+( cd "$P2/run" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P2/pi.sh" ) >"$TMP/pi2.out" 2>&1
+check "duplicate basenames: both folders are mounted" bash -c '
+  grep -q ":/workspace/api$" "$0" && grep -q ":/workspace/api-2$" "$0"' "$TMP/docker.args"
+
 # ===== pi.conf edit (install.sh) ===========================================
 AWK_PROG="$(sed -n "s/.*awk '\(.*\)' pi.conf.*/\1/p" "$SRC/install.sh" | head -1)"
 check "awk program found in install.sh" test -n "$AWK_PROG"
