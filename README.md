@@ -1,4 +1,4 @@
-# pi-sandbox
+# pi-sandbox 1.0.0
 
 Run the [pi](https://github.com/earendil-works/pi-mono) coding agent in a
 Docker container on macOS. The agent sees **only the folders you allow** —
@@ -46,7 +46,9 @@ To add or change a key later:
 security add-generic-password -U -s pi-sandbox -a OPENAI_API_KEY -w
 ```
 
-A key exported in your shell overrides the Keychain for that launch.
+A key exported in your shell **overrides the Keychain** for that launch. This is
+not safe: the key sits in plain text in your shell config or history, readable by
+any program on your Mac. **Use the Keychain to keep your keys secure.**
 
 ## Extensions
 
@@ -74,8 +76,8 @@ image in the background; relaunch to use it. To update right away:
   pi's data lives in Docker volumes, never in your host `~/.pi`.
 - **Keys stay outside** — the container only sees the value `proxy`. A small
   sidecar ([`proxy/keyproxy.mjs`](proxy/keyproxy.mjs)) adds the real key to
-  requests sent to DeepSeek, OpenAI and Tavily. The agent can use a key but
-  not read it.
+  requests sent to DeepSeek, OpenAI and Tavily **(only these 3 for now)**. The
+  agent can use a key but not read it.
 - **Fewer tokens** — [rtk](https://github.com/rtk-ai/rtk) compresses the output
   of shell commands.
 
@@ -83,8 +85,11 @@ image in the background; relaunch to use it. To update right away:
 
 - **Files in allowed folders** are readable: `.env`, tokens, credentials. Keep
   secrets out of them.
-- **Keys can be spent.** The agent can call any proxied provider, whatever
-  model you picked. Keep only the keys you use and set a spending cap on each.
+- **Keys can be spent.** The agent could call any proxied provider, whatever
+  model you picked: with a DeepSeek and an OpenAI key, a session on a DeepSeek
+  model can still call the OpenAI API. **This is true of pi without the sandbox
+  too** (there it can even read the keys). Keep only the keys you use and set a
+  spending cap on each.
 - **Keys without a proxy route** (anything other than DeepSeek, OpenAI, Tavily)
   are passed to the agent as plain env vars. pi warns you at launch.
 - **Never use `/login` in pi**: it saves the key where the agent can read it.
