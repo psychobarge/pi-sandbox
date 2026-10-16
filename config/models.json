@@ -9,6 +9,9 @@
           }
         }
       }
+    },
+    "openai": {
+      "baseUrl": "http://keyproxy:8787/openai"
     }
   }
 }

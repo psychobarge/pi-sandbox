@@ -5,6 +5,7 @@
 // chosen by the agent. Node stdlib only, no dependency, no config file.
 import http from 'node:http';
 import https from 'node:https';
+import { pipeline } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 const ROUTES = [
@@ -58,13 +59,16 @@ function makeHandler(routes) {
     // the key never reaches a second host. fetch() would follow it.
     const upstream = https.request(target, { method: req.method, headers: proxyHeaders(route, req.headers) }, (up) => {
       res.writeHead(up.statusCode, up.headers);
-      up.pipe(res); // streaming: SSE works
+      // streaming: SSE works. pipeline, not pipe: an upstream cut mid-stream must
+      // end pi's response (pipe leaves it hanging), and pi hanging up must stop
+      // the upstream call (no credits burnt on a stream nobody reads).
+      pipeline(up, res, () => {});
     });
     upstream.on('error', () => {
       if (!res.headersSent) res.writeHead(502);
       res.end(); // never echo upstream headers or the error body
     });
-    req.pipe(upstream);
+    pipeline(req, upstream, () => {});
   };
 }
 

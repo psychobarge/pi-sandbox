@@ -57,39 +57,6 @@ for dir in ${ALLOWED[@]+"${ALLOWED[@]}"}; do
   esac
 done
 
-# API keys / env vars to forward. Source of truth: the macOS Keychain
-# (service "pi-sandbox", account = variable name). A variable already set in the
-# shell wins, so you can still override one key for a single launch.
-#
-# Keys with a keyproxy route (proxy/keyproxy.mjs) go to the SIDECAR only: pi
-# gets the dummy value "proxy" and the sidecar injects the real one on the way
-# out, so the agent can use the key but not read or copy it.
-KEYCHAIN_SERVICE="pi-sandbox"
-ENV_ARGS=()
-PROXY_ENV=()
-PROXYED=0
-for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
-  v="${!k:-}"
-  if [ -z "$v" ] && command -v security >/dev/null 2>&1; then
-    v="$(security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$k" -w 2>/dev/null)" || v=""
-  fi
-  [ -n "$v" ] || continue
-  export "$k=$v"   # export keeps the secret out of docker's argv / `ps`
-  case "$k" in
-    DEEPSEEK_API_KEY|OPENAI_API_KEY|TAVILY_API_KEY)
-      PROXY_ENV+=(-e "$k")
-      ENV_ARGS+=(-e "$k=proxy")
-      PROXYED=1
-      # pi-web-access reads TAVILY_BASE_URL (verified in dist/index.js)
-      [ "$k" = TAVILY_API_KEY ] && ENV_ARGS+=(-e TAVILY_BASE_URL=http://keyproxy:8787/tavily)
-      ;;
-    *)
-      echo "⚠ $k has no proxy route, exposed to the agent"
-      ENV_ARGS+=(-e "$k")
-      ;;
-  esac
-done
-
 # Models live in ~/.pi/agent/models.json (user-level, pi reads nothing else),
 # so the repo's config/models.json is bind-mounted over the volume at launch:
 # edit it and relaunch — no reinstall, no drift between repo and volume.
@@ -142,6 +109,39 @@ else
   WORKDIR_ARGS=(-w "$WORKSPACE")
 fi
 
+# API keys / env vars to forward. Source of truth: the macOS Keychain
+# (service "pi-sandbox", account = variable name). A variable already set in the
+# shell wins, so you can still override one key for a single launch.
+#
+# Keys with a keyproxy route (proxy/keyproxy.mjs) go to the SIDECAR only: pi
+# gets the dummy value "proxy" and the sidecar injects the real one on the way
+# out, so the agent can use the key but not read or copy it.
+KEYCHAIN_SERVICE="pi-sandbox"
+ENV_ARGS=()
+PROXY_ENV=()
+PROXIED=0
+for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
+  v="${!k:-}"
+  if [ -z "$v" ] && command -v security >/dev/null 2>&1; then
+    v="$(security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$k" -w 2>/dev/null)" || v=""
+  fi
+  [ -n "$v" ] || continue
+  export "$k=$v"   # export keeps the secret out of docker's argv / `ps`
+  case "$k" in
+    DEEPSEEK_API_KEY|OPENAI_API_KEY|TAVILY_API_KEY)
+      PROXY_ENV+=(-e "$k")
+      ENV_ARGS+=(-e "$k=proxy")
+      PROXIED=1
+      # pi-web-access reads TAVILY_BASE_URL (verified in dist/index.js)
+      [ "$k" = TAVILY_API_KEY ] && ENV_ARGS+=(-e TAVILY_BASE_URL=http://keyproxy:8787/tavily)
+      ;;
+    *)
+      echo "⚠ $k has no proxy route, exposed to the agent"
+      ENV_ARGS+=(-e "$k")
+      ;;
+  esac
+done
+
 # Make sure Docker is up (start OrbStack if needed)
 if ! docker version --format '{{.Server.Version}}' >/dev/null 2>&1; then
   echo "→ Docker is not responding, starting OrbStack / Docker Desktop…"
@@ -176,7 +176,7 @@ fi
 # each other's sidecar. The script is bind-mounted, like config/models.json, so
 # editing it needs no rebuild.
 NET_ARGS=()
-if [ "$PROXYED" = 1 ]; then
+if [ "$PROXIED" = 1 ]; then
   conflict=""
   for a in ${DOCKER_ARGS[@]+"${DOCKER_ARGS[@]}"}; do
     case "$a" in --network|--net|--network=*|--net=*) conflict=1 ;; esac

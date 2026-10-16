@@ -82,9 +82,9 @@ All notable changes to this project are documented here.
   `update-pi-sandbox.sh` repins both architectures' hashes from the release's
   `checksums.txt` when it bumps `RTK_VERSION`, and skips the bump if that file
   is unavailable.
-- `config/models.json` points the deepseek provider at
-  `http://keyproxy:8787/deepseek`: DeepSeek is only reachable through the
-  launcher (the sidecar).
+- `config/models.json` points the deepseek and openai providers at
+  `http://keyproxy:8787/deepseek` and `http://keyproxy:8787/openai`: both are
+  only reachable through the launcher (the sidecar).
 - `pi.sh` now runs its `Authorization: Bearer proxy` path only when a key with a
   proxy route is configured; without one, no sidecar and no extra network.
 
