@@ -112,7 +112,7 @@ check "empty ALLOWED/API_KEYS: no unbound-variable error" \
 # bash 3.2 is the real target and this machine may not have it, so also assert
 # statically that every list that can be empty is expanded with the guard.
 check "every emptyable array in pi.sh is expanded with the guard" bash -c '
-  for v in API_KEYS ALLOWED ARGS ENV_ARGS MODELS_ARGS DOCKER_ARGS; do
+  for v in API_KEYS ALLOWED ARGS ENV_ARGS PROXY_ENV NET_ARGS MODELS_ARGS DOCKER_ARGS; do
     [ "$(grep -c "\"\${$v\[@\]}\"" "$1")" = "$(grep -c "\${$v\[@\]+" "$1")" ] || exit 1
   done' _ "$SRC/pi.sh"
 
@@ -134,6 +134,13 @@ printf '#!/bin/sh\nexit 0\n' > "$P2/repo/update-pi-sandbox.sh"; chmod +x "$P2/re
 STUB2="$TMP/stub2"; mkdir -p "$STUB2"
 cat > "$STUB2/docker" <<'STUB'
 #!/bin/sh
+# keyproxy calls are kept out of $ARGS_LOG so the pi arguments stay readable
+case "$1" in
+  run)
+    if [ "${2:-}" = "-d" ]; then printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; exit 0; fi ;;
+  network|rm|ps) exit 0 ;;
+  logs) echo "keyproxy listening"; exit 0 ;;
+esac
 printf '%s\n' "$@" >> "$ARGS_LOG"
 exit 0
 STUB
@@ -411,6 +418,68 @@ check "API key is forwarded by name only (-e NAME)" \
   bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx TEST_SECRET_KEY' "$TMP/docker.args"
 check "API key value never reaches docker's arguments" \
   bash -c '! grep -q "s3cr3t" "$0"' "$TMP/docker.args"
+check "unknown key: warned as exposed" \
+  grep -q 'TEST_SECRET_KEY has no proxy route' "$TMP/pi8.out"
+
+# ===== keyproxy sidecar (pi.sh) ===========================================
+# A key with a proxy route (DEEPSEEK/OPENAI/TAVILY) must reach the sidecar only:
+# pi gets "proxy" and the sidecar injects the real key on the way out.
+PK="$TMP/pi-key"; mkdir -p "$PK/repo" "$PK/run"
+cp "$SRC/pi.sh" "$PK/repo/"
+cat > "$PK/repo/pi.conf" <<EOF
+ALLOWED=("$PK/run")
+API_KEYS=(TAVILY_API_KEY)
+IMAGE="pi-sandbox"
+VOLUME="pi-agent-home"
+RTK_VOLUME="rtk-data"
+WORKSPACE="/workspace"
+DOCKER_ARGS=()
+EOF
+printf '#!/bin/sh\nexit 0\n' > "$PK/repo/update-pi-sandbox.sh"; chmod +x "$PK/repo/update-pi-sandbox.sh"
+run_key() { ( cd "$PK/run" && printf 'n\n' | TAVILY_API_KEY="$1" PATH="${2:-$STUB2}:$PATH" ARGS_LOG="$TMP/docker.args" "$PK/repo/pi.sh" ) >"$PK/out" 2>&1; }
+: > "$TMP/docker.args"; : > "$TMP/docker.args.proxy"
+run_key tv-s3cr3t-value
+check "proxied key: sidecar receives -e NAME" \
+  bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx TAVILY_API_KEY' "$TMP/docker.args.proxy"
+check "proxied key: pi receives the dummy value" grep -qx 'TAVILY_API_KEY=proxy' "$TMP/docker.args"
+check "proxied key: pi gets TAVILY_BASE_URL" \
+  grep -qx 'TAVILY_BASE_URL=http://keyproxy:8787/tavily' "$TMP/docker.args"
+check "proxied key: pi joins the session network" \
+  bash -c 'grep -A1 -x -- "--network" "$0" | grep -q "^pi-net-[0-9]*$"' "$TMP/docker.args"
+check "proxied key: real value never in any docker args" \
+  bash -c '! grep -rq tv-s3cr3t-value "$0"' "$TMP"
+check "sidecar publishes no port" \
+  bash -c '! grep -qE "^(-p|--publish)(=|$)" "$0"' "$TMP/docker.args.proxy"
+
+# `--network none` in DOCKER_ARGS would cut pi off from the sidecar: refuse,
+# never fall back to forwarding the real keys.
+sed -i.bak 's/^DOCKER_ARGS=()/DOCKER_ARGS=(--network none)/' "$PK/repo/pi.conf"
+: > "$TMP/docker.args"
+run_key tv-s3cr3t-value
+check "--network conflict: launch refused" test $? -ne 0
+check "--network conflict: explained" grep -q 'conflicts with keyproxy' "$PK/out"
+check "--network conflict: no pi docker run" bash -c '! grep -qx -- "-it" "$0"' "$TMP/docker.args"
+mv "$PK/repo/pi.conf.bak" "$PK/repo/pi.conf"
+
+# A sidecar that dies before listening must stop the launch, not start pi keyless.
+STUB4="$TMP/stub4"; mkdir -p "$STUB4"
+cat > "$STUB4/docker" <<'STUB'
+#!/bin/sh
+case "$1" in
+  network|rm|ps) exit 0 ;;
+  logs) exit 1 ;;   # --rm: a vanished container makes `docker logs` fail
+  run)
+    if [ "${2:-}" = "-d" ]; then printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; exit 0; fi ;;
+esac
+printf '%s\n' "$@" >> "$ARGS_LOG"
+exit 0
+STUB
+chmod +x "$STUB4/docker"
+: > "$TMP/docker.args"
+run_key tv-s3cr3t-value "$STUB4"
+check "crashed sidecar: launch refused" test $? -ne 0
+check "crashed sidecar: explained" grep -q 'keyproxy failed to start' "$PK/out"
+check "crashed sidecar: no pi docker run" bash -c '! grep -qx -- "-it" "$0"' "$TMP/docker.args"
 
 # ===== launch-time network budget (update-pi-sandbox.sh --status) ==========
 # --status runs before every launch; a dropping network must not stall pi for 2 x 5 s.

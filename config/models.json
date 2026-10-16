@@ -1,6 +1,7 @@
 {
   "providers": {
     "deepseek": {
+      "baseUrl": "http://keyproxy:8787/deepseek",
       "modelOverrides": {
         "deepseek-v4-pro": {
           "thinkingLevelMap": {
@@ -8,6 +9,9 @@
           }
         }
       }
+    },
+    "openai": {
+      "baseUrl": "http://keyproxy:8787/openai"
     }
   }
 }

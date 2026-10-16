@@ -17,6 +17,9 @@ ALLOWED=(
 # Environment variables forwarded to the container (API keys, etc.)
 # Resolved in this order: variable defined in your shell, else macOS Keychain
 # (service "pi-sandbox", account = variable name). Nothing to export in ~/.zshrc.
+# DEEPSEEK/OPENAI/TAVILY go through the keyproxy sidecar: the container only
+# sees the value "proxy". Any OTHER key here has no route and is handed to pi
+# as a real env var, readable by the agent.
 API_KEYS=(
   TAVILY_API_KEY
   OPENAI_API_KEY
@@ -32,6 +35,8 @@ RTK_VOLUME="rtk-data"
 # (confined launches mount the folder at its real host path).
 WORKSPACE="/workspace"
 
-# Extra docker arguments (e.g. --network none to cut Internet access)
+# Extra docker arguments
+# no --network/--net here: the launcher needs one for the keyproxy sidecar and
+# refuses to start when it finds one (all your keys would be exposed otherwise).
 # PI_SKIP_VERSION_CHECK: updates are owned by update-pi-sandbox.sh on the host
 DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)

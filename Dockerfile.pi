@@ -10,12 +10,12 @@ RUN apt-get update \
 # Pin to a release; update-pi-sandbox.sh bumps this and rebuilds the image.
 # Default edition (Apache-2.0 + BUSL-1.1): it keeps the compression engine that
 # rtk-oss drops. x86_64 ships musl (static), aarch64 ships gnu.
-ARG RTK_VERSION=v1.0.0
+ARG RTK_VERSION=v1.0.1
 # SHA-256 of each release tarball, from that release's checksums.txt. A tag is
 # movable, so update-pi-sandbox.sh repins these together with RTK_VERSION; the
 # build verifies the download against them (see the sha256sum check below).
-ARG RTK_SHA256_X86_64=b0b69fbed72f55d8eae18587c0b6bc140a8a8b39d5b7c6e6df33795249940926
-ARG RTK_SHA256_AARCH64=9438c2c99d428fa6fbe7f4d1c01a87babd5feec17ee6d7bb3372a613a21db7d3
+ARG RTK_SHA256_X86_64=5b919c3bccb799b67a61866d0e617410a4fcdf173e2614440e59de2fa2003436
+ARG RTK_SHA256_AARCH64=cd627c4091ad90b5e5aca83ca5af66ee4b8aa8537a736533fa90544f461f1c2b
 RUN case "$(uname -m)" in \
        x86_64)  TARGET=x86_64-unknown-linux-musl; SHA="${RTK_SHA256_X86_64}" ;; \
        aarch64) TARGET=aarch64-unknown-linux-gnu; SHA="${RTK_SHA256_AARCH64}" ;; \
@@ -30,7 +30,7 @@ RUN case "$(uname -m)" in \
   && rtk --version
 
 # pi — pinned; update-pi-sandbox.sh bumps this and rebuilds the image.
-RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.2.0
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.3.0
 
 WORKDIR /workspace
 ENTRYPOINT ["pi"]

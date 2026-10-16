@@ -5,4 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # keyproxy runs on Node 24 (the image); the runner's Node is enough to
+      # exercise the routing checks (no network, no real key).
+      - run: node proxy/keyproxy.mjs --selftest
       - run: ./test-pi-sandbox.sh

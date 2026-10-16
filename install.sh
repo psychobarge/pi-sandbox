@@ -128,7 +128,8 @@ echo "════════════════════════�
 store_key TAVILY_API_KEY
 [ -n "${DEEPSEEK_OPTED:-}" ] && store_key DEEPSEEK_API_KEY
 echo
-echo "pi.sh forwards them to the container automatically at launch."
+echo "pi.sh hands them to the keyproxy sidecar at launch, so the container only ever"
+echo "sees the value \"proxy\" — the real keys stay outside pi."
 echo "macOS may ask \"security wants to use…\" on first read: click Always Allow."
 echo "Remove any 'export …_API_KEY=' line left in ~/.zshrc."
 echo "════════════════════════════════════════════════════════════════"

@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [1.1.0] — 2026-10-16
 
 ### Fixed
 - The DeepSeek settings merge no longer loses data: an invalid `settings.json`
@@ -46,9 +46,19 @@ All notable changes to this project are documented here.
   had actually succeeded as failed.
 
 ### Added
+- **keyproxy**: the model and web-search keys (DEEPSEEK/OPENAI/TAVILY) no
+  longer enter the pi container. `pi.sh` starts a sidecar
+  (`proxy/keyproxy.mjs`, Node stdlib) on a private per-session docker network
+  and passes pi the dummy value `proxy`; the sidecar injects the real key in the
+  outbound `Authorization` header. The route table is fixed
+  (`/deepseek`, `/openai`, `/tavily`), unknown paths get a 404, redirects are
+  not followed, the port is never published and the sidecar is removed on exit
+  (Ctrl-C included) with orphan cleanup at the next launch. `API_KEYS` entries
+  without a route are still forwarded as plain env vars, with a warning.
 - GitHub Actions workflow running `./test-pi-sandbox.sh` on every push and PR.
-- README: a "What the sandbox does not protect" section (forwarded keys are
-  readable by the agent; files it writes in an allowed repo can run on the host
+- README: a "What the sandbox does not protect" section (what the agent can
+  still read: secrets in the mounted folders and in the volumes, keys without a
+  proxy route; files it writes in an allowed repo can run on the host
   through git hooks and editor/shell tooling).
 - Numerous unit tests for the launcher, the installer and the update script
   (`test-pi-sandbox.sh`), runnable with `./test-pi-sandbox.sh` (no Docker, no network).
@@ -72,6 +82,21 @@ All notable changes to this project are documented here.
   `update-pi-sandbox.sh` repins both architectures' hashes from the release's
   `checksums.txt` when it bumps `RTK_VERSION`, and skips the bump if that file
   is unavailable.
+- `config/models.json` points the deepseek and openai providers at
+  `http://keyproxy:8787/deepseek` and `http://keyproxy:8787/openai`: both are
+  only reachable through the launcher (the sidecar).
+- `pi.sh` now runs its `Authorization: Bearer proxy` path only when a key with a
+  proxy route is configured; without one, no sidecar and no extra network.
+
+### Updated
+- pi bumped `1.2.0` → `1.3.0` and rtk `v1.0.0` → `v1.0.1` in `Dockerfile.pi`
+  (rtk SHA-256 pins refreshed).
+
+### Security
+- **Rotate the DeepSeek/OpenAI/Tavily keys once after upgrading.** Earlier
+  sessions held them in the container environment and the `pi-agent-home`
+  transcripts may contain them, so the proxy would otherwise protect keys that
+  are already exposed.
 
 ## [1.0.0] — 2026-10-15
 
