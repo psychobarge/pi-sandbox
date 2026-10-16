@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [1.1.0] — 2026-10-16
 
 ### Fixed
 - The DeepSeek settings merge no longer loses data: an invalid `settings.json`
@@ -87,6 +87,10 @@ All notable changes to this project are documented here.
   only reachable through the launcher (the sidecar).
 - `pi.sh` now runs its `Authorization: Bearer proxy` path only when a key with a
   proxy route is configured; without one, no sidecar and no extra network.
+
+### Updated
+- pi bumped `1.2.0` → `1.3.0` and rtk `v1.0.0` → `v1.0.1` in `Dockerfile.pi`
+  (rtk SHA-256 pins refreshed).
 
 ### Security
 - **Rotate the DeepSeek/OpenAI/Tavily keys once after upgrading.** Earlier

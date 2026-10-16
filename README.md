@@ -222,6 +222,11 @@ guarantee that nothing it does can reach the host:
 - **A key in `API_KEYS` without a proxy route is handed to the agent** as a real
   env var (the launcher prints a warning). Add a route to `proxy/keyproxy.mjs`
   to cover it.
+- **Every proxied key can be spent, whatever model you picked.** A route is
+  live as soon as its key is set, and the sidecar cannot tell pi from the
+  agent: a DeepSeek session can `curl http://keyproxy:8787/openai/…` on your
+  OpenAI key. Keep in `API_KEYS` only the keys you use, and give each one a
+  spending cap at the provider.
 - **Secrets the agent's task itself needs** (tests hitting a third-party API…)
   must be readable, so give that service its own proxy route instead of a plain
   env var.
