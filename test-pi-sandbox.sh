@@ -410,7 +410,7 @@ check "unsafe launch path: pi.conf unchanged" cmp -s "$P6/pi.conf" "$TMP/pi6.con
 # ===== secrets stay out of docker's argv (pi.sh) ===========================
 # pi.sh passes `-e NAME`, never `-e NAME=value`, so keys stay out of `ps`.
 P8="$TMP/pi8"; mkdir -p "$P8"
-cp "$SRC/pi.sh" "$P8/"; sed 's/^API_KEYS=()/API_KEYS=(TEST_SECRET_KEY)/' "$P/pi.conf" > "$P8/pi.conf"
+cp "$SRC/pi.sh" "$P8/"; cp -r "$SRC/proxy" "$P8/"; sed 's/^API_KEYS=()/API_KEYS=(TEST_SECRET_KEY)/' "$P/pi.conf" > "$P8/pi.conf"
 printf '#!/bin/sh\nexit 0\n' > "$P8/update-pi-sandbox.sh"; chmod +x "$P8/update-pi-sandbox.sh"
 : > "$TMP/docker.args"
 ( cd "$TMP/run0" && printf 'n\n' | TEST_SECRET_KEY=s3cr3t-value PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P8/pi.sh" ) >"$TMP/pi8.out" 2>&1
@@ -425,10 +425,10 @@ check "unknown key: warned as exposed" \
 # A key with a proxy route (DEEPSEEK/OPENAI/TAVILY) must reach the sidecar only:
 # pi gets "proxy" and the sidecar injects the real key on the way out.
 PK="$TMP/pi-key"; mkdir -p "$PK/repo" "$PK/run"
-cp "$SRC/pi.sh" "$PK/repo/"
+cp "$SRC/pi.sh" "$PK/repo/"; cp -r "$SRC/proxy" "$PK/repo/"
 cat > "$PK/repo/pi.conf" <<EOF
 ALLOWED=("$PK/run")
-API_KEYS=(TAVILY_API_KEY)
+API_KEYS=(TAVILY_API_KEY ANTHROPIC_API_KEY)
 IMAGE="pi-sandbox"
 VOLUME="pi-agent-home"
 RTK_VOLUME="rtk-data"
@@ -436,18 +436,19 @@ WORKSPACE="/workspace"
 DOCKER_ARGS=()
 EOF
 printf '#!/bin/sh\nexit 0\n' > "$PK/repo/update-pi-sandbox.sh"; chmod +x "$PK/repo/update-pi-sandbox.sh"
-run_key() { ( cd "$PK/run" && printf 'n\n' | TAVILY_API_KEY="$1" PATH="${2:-$STUB2}:$PATH" ARGS_LOG="$TMP/docker.args" "$PK/repo/pi.sh" ) >"$PK/out" 2>&1; }
+run_key() { ( cd "$PK/run" && printf 'n\n' | TAVILY_API_KEY="$1" ANTHROPIC_API_KEY=an-s3cr3t-value PATH="${2:-$STUB2}:$PATH" ARGS_LOG="$TMP/docker.args" "$PK/repo/pi.sh" ) >"$PK/out" 2>&1; }
 : > "$TMP/docker.args"; : > "$TMP/docker.args.proxy"
 run_key tv-s3cr3t-value
 check "proxied key: sidecar receives -e NAME" \
   bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx TAVILY_API_KEY' "$TMP/docker.args.proxy"
 check "proxied key: pi receives the dummy value" grep -qx 'TAVILY_API_KEY=proxy' "$TMP/docker.args"
+check "route added in keyproxy.mjs only: key proxied too" grep -qx 'ANTHROPIC_API_KEY=proxy' "$TMP/docker.args"
 check "proxied key: pi gets TAVILY_BASE_URL" \
   grep -qx 'TAVILY_BASE_URL=http://keyproxy:8787/tavily' "$TMP/docker.args"
 check "proxied key: pi joins the session network" \
   bash -c 'grep -A1 -x -- "--network" "$0" | grep -q "^pi-net-[0-9]*$"' "$TMP/docker.args"
 check "proxied key: real value never in any docker args" \
-  bash -c '! grep -rq tv-s3cr3t-value "$0"' "$TMP"
+  bash -c '! grep -rqE "(tv|an)-s3cr3t-value" "$0"' "$TMP"
 check "sidecar publishes no port" \
   bash -c '! grep -qE "^(-p|--publish)(=|$)" "$0"' "$TMP/docker.args.proxy"
 

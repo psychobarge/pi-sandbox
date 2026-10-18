@@ -42,7 +42,8 @@ API_KEYS=(DEEPSEEK_API_KEY OPENAI_API_KEY TAVILY_API_KEY)
 ```
 
 Edit it, quit pi (`Ctrl-D`) and relaunch. Sessions, settings and extensions are
-kept across launches.
+kept across launches. `pi.conf.example` lists every proxied key, commented out:
+uncomment the ones you use and re-run `./install.sh` to store them.
 
 To add or change a key later:
 
@@ -80,8 +81,15 @@ image in the background; relaunch to use it. To update right away:
   pi's data lives in Docker volumes, never in your host `~/.pi`.
 - **Keys stay outside** — the container only sees the value `proxy`. A small
   sidecar ([`proxy/keyproxy.mjs`](proxy/keyproxy.mjs)) adds the real key to
-  requests sent to DeepSeek, OpenAI and Tavily **(only these 3 for now)**. The
-  agent can use a key but not read it.
+  requests sent to the provider. The agent can use a key but not read it.
+  Proxied keys: `TAVILY_API_KEY` and, for pi's providers, `DEEPSEEK_API_KEY`,
+  `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`,
+  `CEREBRAS_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `TOGETHER_API_KEY`,
+  `NVIDIA_API_KEY`, `HF_TOKEN`, `MOONSHOT_API_KEY` (moonshot.ai only),
+  `ZAI_API_KEY`, `KIMI_API_KEY`, `MINIMAX_API_KEY`, `BASETEN_API_KEY`,
+  `META_API_KEY`, `XIAOMI_API_KEY`, `ANT_LING_API_KEY`,
+  `QWEN_TOKEN_PLAN_API_KEY`. OpenRouter, Fireworks, OpenCode and the cloud
+  providers (Bedrock, Vertex, Azure, Cloudflare) are not proxied yet.
 - **Fewer tokens** — [rtk](https://github.com/rtk-ai/rtk) compresses the output
   of shell commands.
 
@@ -94,8 +102,7 @@ image in the background; relaunch to use it. To update right away:
   model can still call the OpenAI API. **This is true of pi without the sandbox
   too** (there it can even read the keys). Keep only the keys you use and set a
   spending cap on each.
-- **Keys without a proxy route** (anything other than DeepSeek, OpenAI, Tavily)
-  are passed to the agent as plain env vars. pi warns you at launch.
+- **Keys without a proxy route** (anything not in the list above) are passed to the agent as plain env vars. pi warns you at launch.
 - **Never use `/login` in pi**: it saves the key where the agent can read it.
 - **Written files can run on your Mac**: git hooks, `.envrc`, `package.json`
   scripts… Review the agent's changes before running anything.

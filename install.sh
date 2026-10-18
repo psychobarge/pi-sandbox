@@ -87,6 +87,7 @@ case "$want_deepseek" in
     if ! grep -q '^[^#]*DEEPSEEK_API_KEY' pi.conf; then
       printf '\nAPI_KEYS+=(DEEPSEEK_API_KEY)   # added by install.sh\n' >> pi.conf
       echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
+      API_KEYS+=(DEEPSEEK_API_KEY)   # pi.conf was sourced before this append
     fi
     DEEPSEEK_OPTED=1
     ;;
@@ -125,8 +126,8 @@ echo
 echo "════════════════════════════════════════════════════════════════"
 echo "  API KEYS — stored in your macOS Keychain (login keychain)"
 echo "════════════════════════════════════════════════════════════════"
-store_key TAVILY_API_KEY
-[ -n "${DEEPSEEK_OPTED:-}" ] && store_key DEEPSEEK_API_KEY
+# only the keys listed in pi.conf: uncomment more there, then re-run install.sh
+for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do store_key "$k"; done
 echo
 echo "pi.sh hands them to the keyproxy sidecar at launch, so the container only ever"
 echo "sees the value \"proxy\" — the real keys stay outside pi."

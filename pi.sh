@@ -117,6 +117,7 @@ fi
 # gets the dummy value "proxy" and the sidecar injects the real one on the way
 # out, so the agent can use the key but not read or copy it.
 KEYCHAIN_SERVICE="pi-sandbox"
+KEYPROXY="$(dirname "$SCRIPT")/proxy/keyproxy.mjs"
 ENV_ARGS=()
 PROXY_ENV=()
 PROXIED=0
@@ -126,20 +127,20 @@ for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
     v="$(security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$k" -w 2>/dev/null)" || v=""
   fi
   [ -n "$v" ] || continue
+  # without the route table every key would fall through to "exposed"
+  [ -f "$KEYPROXY" ] || { log_error "proxy/keyproxy.mjs missing"; echo "❌ proxy/keyproxy.mjs missing: re-clone pi-sandbox"; exit 1; }
   export "$k=$v"   # export keeps the secret out of docker's argv / `ps`
-  case "$k" in
-    DEEPSEEK_API_KEY|OPENAI_API_KEY|TAVILY_API_KEY)
-      PROXY_ENV+=(-e "$k")
-      ENV_ARGS+=(-e "$k=proxy")
-      PROXIED=1
-      # pi-web-access reads TAVILY_BASE_URL (verified in dist/index.js)
-      [ "$k" = TAVILY_API_KEY ] && ENV_ARGS+=(-e TAVILY_BASE_URL=http://keyproxy:8787/tavily)
-      ;;
-    *)
-      echo "⚠ $k has no proxy route, exposed to the agent"
-      ENV_ARGS+=(-e "$k")
-      ;;
-  esac
+  # The proxied keys are the ROUTES of keyproxy.mjs, so a new route needs no edit here.
+  if grep -qF "env: '$k'" "$KEYPROXY"; then
+    PROXY_ENV+=(-e "$k")
+    ENV_ARGS+=(-e "$k=proxy")
+    PROXIED=1
+    # pi-web-access reads TAVILY_BASE_URL (verified in dist/index.js)
+    [ "$k" = TAVILY_API_KEY ] && ENV_ARGS+=(-e TAVILY_BASE_URL=http://keyproxy:8787/tavily)
+  else
+    echo "⚠ $k has no proxy route, exposed to the agent"
+    ENV_ARGS+=(-e "$k")
+  fi
 done
 
 # Make sure Docker is up (start OrbStack if needed)
@@ -202,7 +203,7 @@ if [ "$PROXIED" = 1 ]; then
   # No -p: 8787 must never be reachable from the Mac, only from the session network.
   docker run -d --rm --name "$PROXY" --network "$NET" --network-alias keyproxy \
     --read-only --cap-drop ALL --security-opt no-new-privileges --user node \
-    -v "$(dirname "$SCRIPT")/proxy/keyproxy.mjs:/keyproxy.mjs:ro" \
+    -v "$KEYPROXY:/keyproxy.mjs:ro" \
     ${PROXY_ENV[@]+"${PROXY_ENV[@]}"} \
     --entrypoint node "$IMAGE" /keyproxy.mjs >/dev/null
 
