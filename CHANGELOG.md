@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [1.2.0] — 2026-10-26
 
 ### Added
 - Anthropic, Gemini, Mistral, Groq, xAI and OpenRouter keys are now proxied
