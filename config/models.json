@@ -12,6 +12,24 @@
     },
     "openai": {
       "baseUrl": "http://keyproxy:8787/openai"
+    },
+    "anthropic": {
+      "baseUrl": "http://keyproxy:8787/anthropic"
+    },
+    "google": {
+      "baseUrl": "http://keyproxy:8787/gemini"
+    },
+    "mistral": {
+      "baseUrl": "http://keyproxy:8787/mistral"
+    },
+    "groq": {
+      "baseUrl": "http://keyproxy:8787/groq"
+    },
+    "xai": {
+      "baseUrl": "http://keyproxy:8787/xai"
+    },
+    "openrouter": {
+      "baseUrl": "http://keyproxy:8787/openrouter"
     }
   }
 }

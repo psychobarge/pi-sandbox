@@ -17,9 +17,10 @@ ALLOWED=(
 # Environment variables forwarded to the container (API keys, etc.)
 # Resolved in this order: variable defined in your shell, else macOS Keychain
 # (service "pi-sandbox", account = variable name). Nothing to export in ~/.zshrc.
-# DEEPSEEK/OPENAI/TAVILY go through the keyproxy sidecar: the container only
-# sees the value "proxy". Any OTHER key here has no route and is handed to pi
-# as a real env var, readable by the agent.
+# Supported keys (README, "Supported keys": Anthropic, DeepSeek, Gemini, Groq,
+# Mistral, OpenAI, OpenRouter, Tavily, xAI) go through the keyproxy sidecar:
+# the container only sees the value "proxy". Any OTHER key here has no route
+# and is handed to pi as a real env var, readable by the agent.
 API_KEYS=(
   TAVILY_API_KEY
   OPENAI_API_KEY

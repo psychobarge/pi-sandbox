@@ -137,7 +137,9 @@ cat > "$STUB2/docker" <<'STUB'
 # keyproxy calls are kept out of $ARGS_LOG so the pi arguments stay readable
 case "$1" in
   run)
-    if [ "${2:-}" = "-d" ]; then printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; exit 0; fi ;;
+    if [ "${2:-}" = "-d" ]; then
+      printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; printf '%s\n' "${KEYPROXY_ROUTES:-}" > "$ARGS_LOG.routes"; exit 0
+    fi ;;
   network|rm|ps) exit 0 ;;
   logs) echo "keyproxy listening"; exit 0 ;;
 esac
@@ -422,7 +424,7 @@ check "unknown key: warned as exposed" \
   grep -q 'TEST_SECRET_KEY has no proxy route' "$TMP/pi8.out"
 
 # ===== keyproxy sidecar (pi.sh) ===========================================
-# A key with a proxy route (DEEPSEEK/OPENAI/TAVILY) must reach the sidecar only:
+# A key with a proxy route (built-in table in pi.sh) must reach the sidecar only:
 # pi gets "proxy" and the sidecar injects the real key on the way out.
 PK="$TMP/pi-key"; mkdir -p "$PK/repo" "$PK/run"
 cp "$SRC/pi.sh" "$PK/repo/"
@@ -450,6 +452,42 @@ check "proxied key: real value never in any docker args" \
   bash -c '! grep -rq tv-s3cr3t-value "$0"' "$TMP"
 check "sidecar publishes no port" \
   bash -c '! grep -qE "^(-p|--publish)(=|$)" "$0"' "$TMP/docker.args.proxy"
+check "sidecar receives -e KEYPROXY_ROUTES" \
+  bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx KEYPROXY_ROUTES' "$TMP/docker.args.proxy"
+check "route table: tavily entry" \
+  bash -c 'tr ";" "\n" < "$0" | grep -qx "TAVILY_API_KEY|/tavily|https://api.tavily.com"' "$TMP/docker.args.routes"
+check "route table: every built-in route, prefix derived from the name" \
+  bash -c 'tr ";" "\n" < "$0" | grep -qx "OPENROUTER_API_KEY|/openrouter|https://openrouter.ai/api/v1"' "$TMP/docker.args.routes"
+check "route table: a key not loaded is not given to the sidecar" \
+  bash -c '! grep -qx DEEPSEEK_API_KEY "$0"' "$TMP/docker.args.proxy"
+
+# A route table exported in the calling shell must never reach the sidecar.
+( cd "$PK/run" && printf 'n\n' | KEYPROXY_ROUTES='EVIL_API_KEY|/evil|https://evil.test' TAVILY_API_KEY=tv \
+  PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$PK/repo/pi.sh" ) >/dev/null 2>&1
+check "route table: shell KEYPROXY_ROUTES ignored" bash -c '! grep -q evil "$0"' "$TMP/docker.args.routes"
+
+# Built-in key with an x-api-key client (Anthropic): proxied like the others.
+sed -i.bak 's/^API_KEYS=(TAVILY_API_KEY)/API_KEYS=(ANTHROPIC_API_KEY)/' "$PK/repo/pi.conf"
+: > "$TMP/docker.args"; : > "$TMP/docker.args.proxy"
+( cd "$PK/run" && printf 'n\n' | ANTHROPIC_API_KEY=sk-ant-s3cr3t PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$PK/repo/pi.sh" ) >"$PK/out" 2>&1
+check "anthropic key: pi receives the dummy value" grep -qx 'ANTHROPIC_API_KEY=proxy' "$TMP/docker.args"
+check "anthropic key: sidecar receives -e NAME" \
+  bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx ANTHROPIC_API_KEY' "$TMP/docker.args.proxy"
+check "anthropic key: no exposure warning" bash -c '! grep -q "no proxy route" "$0"' "$PK/out"
+check "anthropic key: real value never in any docker args" bash -c '! grep -rq sk-ant-s3cr3t "$0"' "$TMP"
+mv "$PK/repo/pi.conf.bak" "$PK/repo/pi.conf"
+
+# The pi.sh table, config/models.json and the README list must name the same routes.
+check "models.json: every baseUrl is a built-in route" bash -c '
+  routes="$(tr ";" "\n" < "$1" | cut -d"|" -f2)"
+  for u in $(grep -o "\"baseUrl\": *\"[^\"]*\"" "$0" | cut -d\" -f4); do
+    case "$u" in http://keyproxy:8787/*) ;; *) exit 1 ;; esac
+    printf "%s\n" "$routes" | grep -qx "/${u#http://keyproxy:8787/}" || exit 1
+  done' "$SRC/config/models.json" "$TMP/docker.args.routes"
+check "README: supported keys match the pi.sh table" bash -c '
+  diff <(tr ";" "\n" < "$1" | cut -d"|" -f1 | grep . | sort) \
+       <(sed -n "/^### Supported keys/,/^##[^#]/p" "$0" | grep -o "^| \`[A-Z_]*_API_KEY\`" | tr -d "|\` " | sort)' \
+  "$SRC/README.md" "$TMP/docker.args.routes"
 
 # `--network none` in DOCKER_ARGS would cut pi off from the sidecar: refuse,
 # never fall back to forwarding the real keys.
@@ -467,7 +505,8 @@ cat > "$STUB4/docker" <<'STUB'
 #!/bin/sh
 case "$1" in
   network|rm|ps) exit 0 ;;
-  logs) exit 1 ;;   # --rm: a vanished container makes `docker logs` fail
+  logs) echo 'invalid route "X": upstream must be https'; exit 0 ;;
+  inspect) echo false; exit 0 ;;   # exited
   run)
     if [ "${2:-}" = "-d" ]; then printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; exit 0; fi ;;
 esac
@@ -479,6 +518,7 @@ chmod +x "$STUB4/docker"
 run_key tv-s3cr3t-value "$STUB4"
 check "crashed sidecar: launch refused" test $? -ne 0
 check "crashed sidecar: explained" grep -q 'keyproxy failed to start' "$PK/out"
+check "crashed sidecar: its logs are shown" grep -q 'invalid route' "$PK/out"
 check "crashed sidecar: no pi docker run" bash -c '! grep -qx -- "-it" "$0"' "$TMP/docker.args"
 
 # ===== launch-time network budget (update-pi-sandbox.sh --status) ==========

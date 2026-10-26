@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Added
+- Built-in proxy routes for Anthropic, Gemini, Mistral, Groq, xAI and
+  OpenRouter: list the key in `API_KEYS` and the agent only sees `proxy`, like
+  DeepSeek, OpenAI and Tavily. The route table lives in `pi.sh` only; the
+  sidecar receives it at startup, validates it (https only, no userinfo, query
+  or fragment, one-segment prefix) and refuses to start on any error.
+
+### Changed
+- The sidecar replaces the dummy `proxy` in whichever header the client puts
+  it (`Authorization: Bearer`, `x-api-key`, `x-goog-api-key`) and forwards any
+  other credential unchanged, instead of always forcing `Authorization: Bearer`.
+  Routes without a loaded key now forward to their fixed host instead of 404.
+
+### Fixed
+- A sidecar that fails at startup now shows its error: it ran with `--rm`, so
+  its logs were gone before the launcher read them, and the launcher waited the
+  full 5 s instead of stopping when it exited.
+
 ## [1.1.0] — 2026-10-16
 
 ### Fixed
