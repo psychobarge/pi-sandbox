@@ -5,22 +5,28 @@ All notable changes to this project are documented here.
 ## [Unreleased]
 
 ### Added
-- Built-in proxy routes for Anthropic, Gemini, Mistral, Groq, xAI and
-  OpenRouter: list the key in `API_KEYS` and the agent only sees `proxy`, like
-  DeepSeek, OpenAI and Tavily. The route table lives in `pi.sh` only; the
-  sidecar receives it at startup, validates it (https only, no userinfo, query
-  or fragment, one-segment prefix) and refuses to start on any error.
+- Anthropic, Gemini, Mistral, Groq, xAI and OpenRouter keys are now proxied
+  like DeepSeek, OpenAI and Tavily: add the name to `API_KEYS` and the agent
+  only sees `proxy`. Before, these keys were passed as plain env vars. The
+  README lists the supported keys.
+- The proxy route table now lives in `pi.sh` only. The sidecar checks it at
+  startup (https only, no userinfo, query or fragment, one-segment prefix)
+  and refuses to start on any error.
 
 ### Changed
-- The sidecar replaces the dummy `proxy` in whichever header the client puts
-  it (`Authorization: Bearer`, `x-api-key`, `x-goog-api-key`) and forwards any
-  other credential unchanged, instead of always forcing `Authorization: Bearer`.
-  Routes without a loaded key now forward to their fixed host instead of 404.
+- `config/models.json` points the new providers at the proxy. If you edited
+  this file, merge the new `baseUrl` entries when you pull.
+- The sidecar puts the real key where the client sent `proxy`
+  (`Authorization: Bearer`, `x-api-key` or `x-goog-api-key`) instead of always
+  forcing `Authorization: Bearer`. Any other credential, such as a `/login`
+  token, is forwarded unchanged, and a provider without a loaded key is
+  forwarded too instead of answering 404: `/login` keeps working while the
+  sidecar runs (it is still not recommended).
 
 ### Fixed
-- A sidecar that fails at startup now shows its error: it ran with `--rm`, so
-  its logs were gone before the launcher read them, and the launcher waited the
-  full 5 s instead of stopping when it exited.
+- A sidecar that fails at startup now shows its error. It ran with `--rm`, so
+  its logs were gone before the launcher read them, and the launcher waited
+  the full 5 s instead of stopping as soon as it exited.
 
 ## [1.1.0] — 2026-10-16
 

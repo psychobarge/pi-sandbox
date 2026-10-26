@@ -34,7 +34,7 @@ Everything lives in `pi.conf` (created from `pi.conf.example`, gitignored):
 ALLOWED=(                     # folders the agent may see
   "$HOME/my-project"
 )
-API_KEYS=(DEEPSEEK_API_KEY OPENAI_API_KEY TAVILY_API_KEY)
+API_KEYS=(DEEPSEEK_API_KEY OPENAI_API_KEY TAVILY_API_KEY)   # see "Supported keys"
 ```
 
 Edit it, quit pi (`Ctrl-D`) and relaunch. Sessions, settings and extensions are
@@ -52,8 +52,9 @@ any program on your Mac. **Use the Keychain to keep your keys secure.**
 
 ### Supported keys
 
-List the name in `API_KEYS`, store the key in the Keychain, done: the agent
-only sees the value `proxy`.
+For these keys, add the name to `API_KEYS` and store the key in the Keychain
+(command above). Nothing else to set up: the agent only sees the value `proxy`,
+and pi uses the key right away.
 
 | Key | Provider | Used by |
 |-----|----------|---------|
@@ -67,8 +68,8 @@ only sees the value `proxy`.
 | `TAVILY_API_KEY` | Tavily | web search (pi-web-access) |
 | `XAI_API_KEY` | xAI | pi models |
 
-Any other key in `API_KEYS` is passed to the agent as a plain env var (pi warns
-you at launch).
+Any other key in `API_KEYS` is passed to the agent as a plain env var, readable
+by it (pi warns you at launch).
 
 ## Extensions
 
@@ -127,6 +128,7 @@ image in the background; relaunch to use it. To update right away:
 | pi doesn't see a folder | Add it to `ALLOWED`, then relaunch |
 | Provider not authenticated | `security find-generic-password -s pi-sandbox -a <KEY> -w` should print the key |
 | macOS asks for Keychain access every launch | Click *Always Allow* |
+| `❌ keyproxy failed to start` | The lines printed below it give the reason |
 
 ## License
 
