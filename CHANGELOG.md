@@ -5,10 +5,14 @@ All notable changes to this project are documented here.
 ## [1.2.0] — 2026-10-26
 
 ### Added
-- Anthropic, Gemini, Mistral, Groq, xAI and OpenRouter keys are now proxied
-  like DeepSeek, OpenAI and Tavily: add the name to `API_KEYS` and the agent
-  only sees `proxy`. Before, these keys were passed as plain env vars. The
-  README lists the supported keys.
+- 18 more providers are proxied like DeepSeek, OpenAI and Tavily: Anthropic,
+  Ant Ling, Baseten, Cerebras, Gemini, Groq, Hugging Face (`HF_TOKEN`), Kimi
+  Coding, Meta, MiniMax, Mistral, Moonshot AI, NVIDIA, Qwen Token Plan,
+  Together AI, xAI, Xiaomi MiMo and Z.ai. Add the name to `API_KEYS` and the
+  agent only sees `proxy`; before, these keys were passed as plain env vars.
+  Each route uses the base URL of pi 1.4.0's own provider. The README lists
+  the supported keys. OpenRouter is not proxied: pi sends its `anthropic/*`
+  models to a different base path, which one proxy route cannot serve.
 - The proxy route table now lives in `pi.sh` only. The sidecar checks it at
   startup (https only, no userinfo, query or fragment, one-segment prefix)
   and refuses to start on any error.

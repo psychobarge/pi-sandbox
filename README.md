@@ -63,14 +63,26 @@ and pi uses the key right away.
 | Key | Provider | Used by |
 |-----|----------|---------|
 | `ANTHROPIC_API_KEY` | Anthropic | pi models |
+| `ANT_LING_API_KEY` | Ant Ling | pi models |
+| `BASETEN_API_KEY` | Baseten | pi models |
+| `CEREBRAS_API_KEY` | Cerebras | pi models |
 | `DEEPSEEK_API_KEY` | DeepSeek | pi models |
 | `GEMINI_API_KEY` | Google Gemini | pi models |
 | `GROQ_API_KEY` | Groq | pi models |
+| `HF_TOKEN` | Hugging Face | pi models |
+| `KIMI_API_KEY` | Kimi Coding | pi models |
+| `META_API_KEY` | Meta | pi models |
+| `MINIMAX_API_KEY` | MiniMax (global) | pi models |
 | `MISTRAL_API_KEY` | Mistral | pi models |
+| `MOONSHOT_API_KEY` | Moonshot AI (global, not `moonshotai-cn`) | pi models |
+| `NVIDIA_API_KEY` | NVIDIA | pi models |
 | `OPENAI_API_KEY` | OpenAI | pi models |
-| `OPENROUTER_API_KEY` | OpenRouter | pi models |
+| `QWEN_TOKEN_PLAN_API_KEY` | Qwen Token Plan (international) | pi models |
 | `TAVILY_API_KEY` | Tavily | web search (pi-web-access) |
+| `TOGETHER_API_KEY` | Together AI | pi models |
 | `XAI_API_KEY` | xAI | pi models |
+| `XIAOMI_API_KEY` | Xiaomi MiMo | pi models |
+| `ZAI_API_KEY` | Z.ai | pi models |
 
 Any other key in `API_KEYS` is passed to the agent as a plain env var, readable
 by it (pi warns you at launch).
@@ -118,7 +130,7 @@ image in the background; relaunch to use it. To update right away:
 - **Keys without a proxy route** (not in [supported keys](#supported-keys))
   are passed to the agent as plain env vars. pi warns you at launch.
 - **Any path of a provider's host** can be called with its key, not only the
-  model API: for OpenRouter that is the whole `openrouter.ai` site.
+  model API (account or billing endpoints on the same host, for example).
 - **Never use `/login` in pi**: it saves the key where the agent can read it.
 - **Written files can run on your Mac**: git hooks, `.envrc`, `package.json`
   scripts… Review the agent's changes before running anything.

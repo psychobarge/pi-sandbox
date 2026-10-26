@@ -28,8 +28,47 @@
     "xai": {
       "baseUrl": "http://keyproxy:8787/xai"
     },
-    "openrouter": {
-      "baseUrl": "http://keyproxy:8787/openrouter"
+    "cerebras": {
+      "baseUrl": "http://keyproxy:8787/cerebras"
+    },
+    "together": {
+      "baseUrl": "http://keyproxy:8787/together"
+    },
+    "nvidia": {
+      "baseUrl": "http://keyproxy:8787/nvidia"
+    },
+    "huggingface": {
+      "baseUrl": "http://keyproxy:8787/hf-token"
+    },
+    "moonshotai": {
+      "baseUrl": "http://keyproxy:8787/moonshot"
+    },
+    "zai": {
+      "baseUrl": "http://keyproxy:8787/zai"
+    },
+    "kimi-coding": {
+      "baseUrl": "http://keyproxy:8787/kimi"
+    },
+    "minimax": {
+      "baseUrl": "http://keyproxy:8787/minimax"
+    },
+    "baseten": {
+      "baseUrl": "http://keyproxy:8787/baseten"
+    },
+    "meta": {
+      "baseUrl": "http://keyproxy:8787/meta"
+    },
+    "xiaomi": {
+      "baseUrl": "http://keyproxy:8787/xiaomi"
+    },
+    "ant-ling": {
+      "baseUrl": "http://keyproxy:8787/ant-ling"
+    },
+    "qwen-token-plan": {
+      "baseUrl": "http://keyproxy:8787/qwen-token-plan"
+    },
+    "qwen-token-plan-individual": {
+      "baseUrl": "http://keyproxy:8787/qwen-token-plan"
     }
   }
 }

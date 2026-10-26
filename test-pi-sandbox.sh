@@ -456,8 +456,10 @@ check "sidecar receives -e KEYPROXY_ROUTES" \
   bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx KEYPROXY_ROUTES' "$TMP/docker.args.proxy"
 check "route table: tavily entry" \
   bash -c 'tr ";" "\n" < "$0" | grep -qx "TAVILY_API_KEY|/tavily|https://api.tavily.com"' "$TMP/docker.args.routes"
-check "route table: every built-in route, prefix derived from the name" \
-  bash -c 'tr ";" "\n" < "$0" | grep -qx "OPENROUTER_API_KEY|/openrouter|https://openrouter.ai/api/v1"' "$TMP/docker.args.routes"
+check "route table: prefix derived from the name (_ → -)" \
+  bash -c 'tr ";" "\n" < "$0" | grep -qx "ANT_LING_API_KEY|/ant-ling|https://api.ant-ling.com/v1"' "$TMP/docker.args.routes"
+check "route table: a key not ending in _API_KEY keeps its full name" \
+  bash -c 'tr ";" "\n" < "$0" | grep -qx "HF_TOKEN|/hf-token|https://router.huggingface.co/v1"' "$TMP/docker.args.routes"
 check "route table: a key not loaded is not given to the sidecar" \
   bash -c '! grep -qx DEEPSEEK_API_KEY "$0"' "$TMP/docker.args.proxy"
 
@@ -486,7 +488,7 @@ check "models.json: every baseUrl is a built-in route" bash -c '
   done' "$SRC/config/models.json" "$TMP/docker.args.routes"
 check "README: supported keys match the pi.sh table" bash -c '
   diff <(tr ";" "\n" < "$1" | cut -d"|" -f1 | grep . | sort) \
-       <(sed -n "/^### Supported keys/,/^##[^#]/p" "$0" | grep -o "^| \`[A-Z_]*_API_KEY\`" | tr -d "|\` " | sort)' \
+       <(sed -n "/^### Supported keys/,/^##[^#]/p" "$0" | grep -o "^| \`[A-Z_]*\`" | tr -d "|\` " | sort)' \
   "$SRC/README.md" "$TMP/docker.args.routes"
 
 # `--network none` in DOCKER_ARGS would cut pi off from the sidecar: refuse,

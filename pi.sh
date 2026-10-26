@@ -119,7 +119,8 @@ fi
 #
 # Built-in routes, KEY|upstream: each one checked in pi's provider code (base
 # URL as pi's provider has it). Route prefix = KEY minus _API_KEY, lowercased,
-# _ → - (OPENROUTER_API_KEY → /openrouter); config/models.json points there.
+# _ → - (ANT_LING_API_KEY → /ant-ling, HF_TOKEN → /hf-token); config/models.json
+# points there.
 PROXY_TABLE=(
   "DEEPSEEK_API_KEY|https://api.deepseek.com"
   "OPENAI_API_KEY|https://api.openai.com/v1"
@@ -129,8 +130,22 @@ PROXY_TABLE=(
   "MISTRAL_API_KEY|https://api.mistral.ai"
   "GROQ_API_KEY|https://api.groq.com/openai/v1"
   "XAI_API_KEY|https://api.x.ai/v1"
-  "OPENROUTER_API_KEY|https://openrouter.ai/api/v1"
+  "CEREBRAS_API_KEY|https://api.cerebras.ai/v1"
+  "TOGETHER_API_KEY|https://api.together.ai/v1"
+  "NVIDIA_API_KEY|https://integrate.api.nvidia.com/v1"
+  "HF_TOKEN|https://router.huggingface.co/v1"
+  "MOONSHOT_API_KEY|https://api.moonshot.ai/v1"
+  "ZAI_API_KEY|https://api.z.ai/api/coding/paas/v4"
+  "KIMI_API_KEY|https://api.kimi.com/coding/v1"
+  "MINIMAX_API_KEY|https://api.minimax.io/anthropic"
+  "BASETEN_API_KEY|https://inference.baseten.co/v1"
+  "META_API_KEY|https://api.meta.ai/v1"
+  "XIAOMI_API_KEY|https://api.xiaomimimo.com/v1"
+  "ANT_LING_API_KEY|https://api.ant-ling.com/v1"
+  "QWEN_TOKEN_PLAN_API_KEY|https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
 )
+# Not OpenRouter: pi sends its anthropic/* models to openrouter.ai/api and the
+# others to openrouter.ai/api/v1, and one models.json baseUrl cannot serve both.
 # Every route is sent, loaded key or not (a route without key forwards as is).
 # Reset first: a value exported in the calling shell must never reach the sidecar.
 KEYPROXY_ROUTES=""
