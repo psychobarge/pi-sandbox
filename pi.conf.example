@@ -5,8 +5,8 @@
 # pi.sh auto-creates pi.conf from this example on first run if it is missing.
 
 # Allowed folders: the container sees ONLY these. Never list pi-sandbox itself,
-# a folder inside it, or a parent of it (~, ~/Workspace): the agent could rewrite pi.conf/pi.sh and
-# get them run on the host. pi.sh skips such entries.
+# a folder inside it, or a parent of it (~, ~/Workspace): the agent could
+# rewrite pi.conf/pi.sh and get them run on the host. pi.sh skips such entries.
 # - Launched from inside one → confined to that folder, mounted at its real
 #   path (pi's footer shows the actual location).
 # - Launched elsewhere and answering "n" → all mounted under $WORKSPACE/<name>.
@@ -14,12 +14,15 @@ ALLOWED=(
   "$HOME/<your-project-path>"                       # e.g. ~/my-project
 )
 
-# Environment variables forwarded to the container (API keys, etc.)
-# Resolved in this order: variable defined in your shell, else macOS Keychain
-# (service "pi-sandbox", account = variable name). Nothing to export in ~/.zshrc.
-# DEEPSEEK/OPENAI/TAVILY go through the keyproxy sidecar: the container only
-# sees the value "proxy". Any OTHER key here has no route and is handed to pi
-# as a real env var, readable by the agent.
+# API keys, by variable name. Each one is read from your shell if exported
+# there, else from the macOS Keychain (service "pi-sandbox"). To store one:
+#   security add-generic-password -U -s pi-sandbox -a OPENAI_API_KEY -w
+# Supported keys never enter the container: pi only sees the value "proxy" and
+# the keyproxy sidecar adds the real key (list in README, "Supported keys"):
+#   ANTHROPIC_API_KEY   DEEPSEEK_API_KEY    GEMINI_API_KEY
+#   GROQ_API_KEY        MISTRAL_API_KEY     OPENAI_API_KEY
+#   OPENROUTER_API_KEY  TAVILY_API_KEY      XAI_API_KEY
+# Any other name is passed as a plain env var: the agent can read it.
 API_KEYS=(
   TAVILY_API_KEY
   OPENAI_API_KEY
@@ -35,8 +38,8 @@ RTK_VOLUME="rtk-data"
 # (confined launches mount the folder at its real host path).
 WORKSPACE="/workspace"
 
-# Extra docker arguments
-# no --network/--net here: the launcher needs one for the keyproxy sidecar and
-# refuses to start when it finds one (all your keys would be exposed otherwise).
+# Extra docker arguments for the pi container.
+# No --network/--net: pi.sh puts pi on the keyproxy sidecar's network itself
+# and refuses to start if one is set here while a key is proxied.
 # PI_SKIP_VERSION_CHECK: updates are owned by update-pi-sandbox.sh on the host
 DOCKER_ARGS=(-e PI_SKIP_VERSION_CHECK=1)

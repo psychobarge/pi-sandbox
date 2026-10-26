@@ -1,4 +1,4 @@
-# pi-sandbox 1.0.0
+# pi-sandbox 1.2.0
 
 Run the [pi](https://github.com/earendil-works/pi-mono) coding agent in a
 Docker container on macOS. The agent sees **only the folders you allow** —
@@ -34,7 +34,7 @@ Everything lives in `pi.conf` (created from `pi.conf.example`, gitignored):
 ALLOWED=(                     # folders the agent may see
   "$HOME/my-project"
 )
-API_KEYS=(DEEPSEEK_API_KEY OPENAI_API_KEY TAVILY_API_KEY)
+API_KEYS=(DEEPSEEK_API_KEY OPENAI_API_KEY TAVILY_API_KEY)   # see "Supported keys"
 ```
 
 Edit it, quit pi (`Ctrl-D`) and relaunch. Sessions, settings and extensions are
@@ -49,6 +49,27 @@ security add-generic-password -U -s pi-sandbox -a OPENAI_API_KEY -w
 A key exported in your shell **overrides the Keychain** for that launch. This is
 not safe: the key sits in plain text in your shell config or history, readable by
 any program on your Mac. **Use the Keychain to keep your keys secure.**
+
+### Supported keys
+
+For these keys, add the name to `API_KEYS` and store the key in the Keychain
+(command above). Nothing else to set up: the agent only sees the value `proxy`,
+and pi uses the key right away.
+
+| Key | Provider | Used by |
+|-----|----------|---------|
+| `ANTHROPIC_API_KEY` | Anthropic | pi models |
+| `DEEPSEEK_API_KEY` | DeepSeek | pi models |
+| `GEMINI_API_KEY` | Google Gemini | pi models |
+| `GROQ_API_KEY` | Groq | pi models |
+| `MISTRAL_API_KEY` | Mistral | pi models |
+| `OPENAI_API_KEY` | OpenAI | pi models |
+| `OPENROUTER_API_KEY` | OpenRouter | pi models |
+| `TAVILY_API_KEY` | Tavily | web search (pi-web-access) |
+| `XAI_API_KEY` | xAI | pi models |
+
+Any other key in `API_KEYS` is passed to the agent as a plain env var, readable
+by it (pi warns you at launch).
 
 ## Extensions
 
@@ -76,8 +97,8 @@ image in the background; relaunch to use it. To update right away:
   pi's data lives in Docker volumes, never in your host `~/.pi`.
 - **Keys stay outside** — the container only sees the value `proxy`. A small
   sidecar ([`proxy/keyproxy.mjs`](proxy/keyproxy.mjs)) adds the real key to
-  requests sent to DeepSeek, OpenAI and Tavily **(only these 3 for now)**. The
-  agent can use a key but not read it.
+  requests sent to the [supported providers](#supported-keys). The agent can
+  use a key but not read it.
 - **Fewer tokens** — [rtk](https://github.com/rtk-ai/rtk) compresses the output
   of shell commands.
 
@@ -90,8 +111,10 @@ image in the background; relaunch to use it. To update right away:
   model can still call the OpenAI API. **This is true of pi without the sandbox
   too** (there it can even read the keys). Keep only the keys you use and set a
   spending cap on each.
-- **Keys without a proxy route** (anything other than DeepSeek, OpenAI, Tavily)
+- **Keys without a proxy route** (not in [supported keys](#supported-keys))
   are passed to the agent as plain env vars. pi warns you at launch.
+- **Any path of a provider's host** can be called with its key, not only the
+  model API: for OpenRouter that is the whole `openrouter.ai` site.
 - **Never use `/login` in pi**: it saves the key where the agent can read it.
 - **Written files can run on your Mac**: git hooks, `.envrc`, `package.json`
   scripts… Review the agent's changes before running anything.
@@ -105,6 +128,7 @@ image in the background; relaunch to use it. To update right away:
 | pi doesn't see a folder | Add it to `ALLOWED`, then relaunch |
 | Provider not authenticated | `security find-generic-password -s pi-sandbox -a <KEY> -w` should print the key |
 | macOS asks for Keychain access every launch | Click *Always Allow* |
+| `❌ keyproxy failed to start` | The lines printed below it give the reason |
 
 ## License
 

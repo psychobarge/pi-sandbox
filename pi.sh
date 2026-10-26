@@ -116,9 +116,32 @@ fi
 # Keys with a keyproxy route (proxy/keyproxy.mjs) go to the SIDECAR only: pi
 # gets the dummy value "proxy" and the sidecar injects the real one on the way
 # out, so the agent can use the key but not read or copy it.
+#
+# Built-in routes, KEY|upstream: each one checked in pi's provider code (base
+# URL as pi's provider has it). Route prefix = KEY minus _API_KEY, lowercased,
+# _ → - (OPENROUTER_API_KEY → /openrouter); config/models.json points there.
+PROXY_TABLE=(
+  "DEEPSEEK_API_KEY|https://api.deepseek.com"
+  "OPENAI_API_KEY|https://api.openai.com/v1"
+  "TAVILY_API_KEY|https://api.tavily.com"
+  "ANTHROPIC_API_KEY|https://api.anthropic.com"
+  "GEMINI_API_KEY|https://generativelanguage.googleapis.com/v1beta"
+  "MISTRAL_API_KEY|https://api.mistral.ai"
+  "GROQ_API_KEY|https://api.groq.com/openai/v1"
+  "XAI_API_KEY|https://api.x.ai/v1"
+  "OPENROUTER_API_KEY|https://openrouter.ai/api/v1"
+)
+# Every route is sent, loaded key or not (a route without key forwards as is).
+# Reset first: a value exported in the calling shell must never reach the sidecar.
+KEYPROXY_ROUTES=""
+for r in "${PROXY_TABLE[@]}"; do
+  name="${r%%|*}"
+  KEYPROXY_ROUTES+="$name|/$(printf '%s' "${name%_API_KEY}" | tr 'A-Z_' 'a-z-')|${r#*|};"
+done
+export KEYPROXY_ROUTES
 KEYCHAIN_SERVICE="pi-sandbox"
 ENV_ARGS=()
-PROXY_ENV=()
+PROXY_ENV=(-e KEYPROXY_ROUTES)
 PROXIED=0
 for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
   v="${!k:-}"
@@ -127,8 +150,8 @@ for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
   fi
   [ -n "$v" ] || continue
   export "$k=$v"   # export keeps the secret out of docker's argv / `ps`
-  case "$k" in
-    DEEPSEEK_API_KEY|OPENAI_API_KEY|TAVILY_API_KEY)
+  case " ${PROXY_TABLE[*]} " in
+    *" $k|"*)
       PROXY_ENV+=(-e "$k")
       ENV_ARGS+=(-e "$k=proxy")
       PROXIED=1
@@ -200,7 +223,9 @@ if [ "$PROXIED" = 1 ]; then
   trap 'docker rm -f "$PROXY" >/dev/null 2>&1; docker network rm "$NET" >/dev/null 2>&1' EXIT
   docker network create "$NET" >/dev/null
   # No -p: 8787 must never be reachable from the Mac, only from the session network.
-  docker run -d --rm --name "$PROXY" --network "$NET" --network-alias keyproxy \
+  # no --rm: a sidecar that dies at startup must keep its logs for the error
+  # below; the trap removes it.
+  docker run -d --name "$PROXY" --network "$NET" --network-alias keyproxy \
     --read-only --cap-drop ALL --security-opt no-new-privileges --user node \
     -v "$(dirname "$SCRIPT")/proxy/keyproxy.mjs:/keyproxy.mjs:ro" \
     ${PROXY_ENV[@]+"${PROXY_ENV[@]}"} \
@@ -208,13 +233,15 @@ if [ "$PROXIED" = 1 ]; then
 
   ready=0
   for _ in {1..25}; do   # 5 s max
-    if ! out="$(docker logs "$PROXY" 2>&1)"; then break; fi   # --rm: gone = crashed
+    if ! out="$(docker logs "$PROXY" 2>&1)"; then break; fi
     case "$out" in *"keyproxy listening"*) ready=1; break ;; esac
+    [ "$(docker inspect -f '{{.State.Running}}' "$PROXY" 2>/dev/null)" = false ] && break   # crashed
     sleep 0.2
   done
   if [ "$ready" != 1 ]; then
     log_error "keyproxy failed to start"
-    echo "❌ keyproxy failed to start (check: docker logs $PROXY)"
+    echo "❌ keyproxy failed to start:"
+    docker logs "$PROXY" 2>&1 | tail -n 5
     exit 1   # the trap removes the sidecar and the network
   fi
   NET_ARGS=(--network "$NET")
