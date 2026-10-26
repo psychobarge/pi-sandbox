@@ -14,6 +14,7 @@ All notable changes to this project are documented here.
   and refuses to start on any error.
 
 ### Changed
+- pi bumped `1.3.0` → `1.4.0` and rtk `v1.0.1` → `v1.1.0` in `Dockerfile.pi`.
 - `config/models.json` points the new providers at the proxy. If you edited
   this file, merge the new `baseUrl` entries when you pull.
 - The sidecar puts the real key where the client sent `proxy`
