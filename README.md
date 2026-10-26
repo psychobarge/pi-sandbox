@@ -6,6 +6,10 @@ not your home directory, not `~/.ssh`, not your host `~/.pi/agent`, and never
 your API keys. It has limits: see
 [what the sandbox does not protect](#what-the-sandbox-does-not-protect).
 
+Also available for Windows / PowerShell:
+[pi-sandbox-windows](https://github.com/psychobarge/pi-sandbox-windows),
+at the same security level.
+
 ## Quick start
 
 Requires Docker ([OrbStack](https://orbstack.dev) or Docker Desktop).
