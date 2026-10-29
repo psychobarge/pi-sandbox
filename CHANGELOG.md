@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [1.3.0] — 2026-10-29
 
 ### Added
 - `pi-ask-user` is now a default extension (`config/settings.json`). Only

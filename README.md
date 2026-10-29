@@ -1,4 +1,4 @@
-# pi-sandbox 1.2.0
+# pi-sandbox 1.3.0
 
 Run the [pi](https://github.com/earendil-works/pi-mono) coding agent in a
 Docker container on macOS. The agent sees **only the folders you allow** —
