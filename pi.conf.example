@@ -32,6 +32,13 @@ API_KEYS=(
   DEEPSEEK_API_KEY
 )
 
+# Paths the keyproxy refuses (403) even with a valid key. "/route/seg" blocks
+# any path under /route containing segment "seg", at any depth. install.sh
+# offers the DeepSeek one: its Search/Fetch tools API (/v1/tools/…) is billed
+# per request, and pi (or a web-search.json the agent wrote) could reach it
+# through the proxy.
+# KEYPROXY_BLOCK_PATHS=(/deepseek/tools)
+
 # Image and volume (volume = sessions/config/extensions, persists across launches)
 IMAGE="pi-sandbox"
 VOLUME="pi-agent-home"

@@ -154,9 +154,12 @@ for r in "${PROXY_TABLE[@]}"; do
   KEYPROXY_ROUTES+="$name|/$(printf '%s' "${name%_API_KEY}" | tr 'A-Z_' 'a-z-')|${r#*|};"
 done
 export KEYPROXY_ROUTES
+# Optional paths the sidecar refuses (403), from pi.conf: only the host sets it.
+KEYPROXY_BLOCK="$(IFS=';'; printf '%s' "${KEYPROXY_BLOCK_PATHS[*]-}")"
+export KEYPROXY_BLOCK
 KEYCHAIN_SERVICE="pi-sandbox"
 ENV_ARGS=()
-PROXY_ENV=(-e KEYPROXY_ROUTES)
+PROXY_ENV=(-e KEYPROXY_ROUTES -e KEYPROXY_BLOCK)
 PROXIED=0
 for k in ${API_KEYS[@]+"${API_KEYS[@]}"}; do
   v="${!k:-}"

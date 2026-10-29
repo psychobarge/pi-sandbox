@@ -131,6 +131,16 @@ image in the background; relaunch to use it. To update right away:
   are passed to the agent as plain env vars. pi warns you at launch.
 - **Any path of a provider's host** can be called with its key, not only the
   model API (account or billing endpoints on the same host, for example).
+  `KEYPROXY_BLOCK_PATHS` in `pi.conf` refuses chosen paths (see
+  `pi.conf.example`).
+- **pi's config persists and the agent can rewrite it.** The `pi-agent-home`
+  volume (`settings.json`, `extensions/`, `web-search.json`…) is writable from
+  the container and survives across sessions. A compromised agent (prompt
+  injection) can leave an extension or a config entry there that runs again
+  in every later session, with access to your allowed folders. It never gets
+  the real keys or leaves the container, but if in doubt:
+  `docker volume rm pi-agent-home` then `./install.sh` (this also deletes
+  your sessions and installed extensions).
 - **Never use `/login` in pi**: it saves the key where the agent can read it.
 - **Written files can run on your Mac**: git hooks, `.envrc`, `package.json`
   scripts… Review the agent's changes before running anything.

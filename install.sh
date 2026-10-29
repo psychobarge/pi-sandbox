@@ -89,6 +89,17 @@ case "$want_deepseek" in
       echo "✓ DEEPSEEK_API_KEY added to API_KEYS (pi.conf)"
     fi
     DEEPSEEK_OPTED=1
+    printf "Block DeepSeek's billed Search/Fetch tools API in the keyproxy (chat models keep working)? [Y/n] "
+    read -r want_block || true
+    case "$want_block" in
+      n|N|no|NO) echo "ℹ️  DeepSeek tools API left open." ;;
+      *)
+        if ! grep -q '^[^#]*KEYPROXY_BLOCK_PATHS' pi.conf; then
+          printf '\nKEYPROXY_BLOCK_PATHS+=(/deepseek/tools)   # added by install.sh\n' >> pi.conf
+        fi
+        echo "✓ DeepSeek tools API blocked (KEYPROXY_BLOCK_PATHS in pi.conf)"
+        ;;
+    esac
     ;;
   *)
     echo "ℹ️  Skipping DeepSeek. Re-run ./install.sh and answer yes to add it later."

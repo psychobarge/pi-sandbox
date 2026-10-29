@@ -8,6 +8,21 @@ All notable changes to this project are documented here.
 - `pi-ask-user` is now a default extension (`config/settings.json`). Only
   fresh installs get it: an existing `pi-agent-home` volume keeps its
   settings, so run `!pi install npm:pi-ask-user` there.
+- Optional keyproxy blocklist (`KEYPROXY_BLOCK_PATHS` in `pi.conf`): matching
+  requests get a 403 and are never forwarded. An entry `/route/seg` blocks any
+  path under `/route` that contains the segment `seg` at any depth, after
+  URL-decoding and lowercasing, so an extra segment from a custom base URL
+  (`/deepseek/x/v1/tools/search`) or `%73earch` cannot slip through.
+  `install.sh` offers `/deepseek/tools` with the DeepSeek opt-in: it blocks
+  DeepSeek's Search and Fetch tools API (`/v1/tools/search`,
+  `/v1/tools/fetch`), billed per request from 2026-11-01, which pi-web-access
+  could otherwise reach through the proxy with the real key (e.g. if the agent
+  writes `deepseekBaseUrl` into `web-search.json`). Chat models are
+  unaffected; nothing else in pi-sandbox uses those endpoints. Existing
+  installs: add the line from `pi.conf.example` to `pi.conf` by hand.
+- README, "What the sandbox does not protect": the `pi-agent-home` volume is
+  writable by the agent and persists, so a compromised agent can leave an
+  extension or config that runs in later sessions; how to reset it.
 
 ## [1.2.0] — 2026-10-26
 

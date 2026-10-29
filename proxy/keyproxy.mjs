@@ -36,6 +36,33 @@ function activeRoutes(text, env = process.env) {
   return parseRoutes(text).map((r) => ({ ...r, key: env[r.env] }));
 }
 
+// Optional blocklist (pi.conf KEYPROXY_BLOCK_PATHS, e.g. DeepSeek's billed
+// /v1/tools/search): "/a/b;/c" → ['/a/b', '/c']. A typo throws, like routes.
+function parseBlock(text) {
+  const list = text.split(';').filter(Boolean);
+  for (const p of list) {
+    if (!/^(\/[a-z0-9-]+)+$/.test(p)) throw new Error(`invalid block "${p}": expected /segment/… in [a-z0-9-]`);
+  }
+  return list;
+}
+
+// "/route/a/b" blocks any path under /route whose segments contain a/b in a
+// row, wherever: an extra segment (`/deepseek/x/v1/tools/search`, from a
+// custom base URL) must not slip through. "/route" alone blocks the route.
+// Compared after decoding and lowercasing: upstreams may treat
+// `/V1//tools/%73earch` as /v1/tools/search. Undecodable → blocked.
+function isBlocked(block, path) {
+  let segs;
+  try { segs = decodeURIComponent(path).toLowerCase().split('/').filter(Boolean); } catch { return true; }
+  return block.some((b) => {
+    const [route, ...want] = b.slice(1).split('/');
+    if (segs[0] !== route) return false;
+    const rest = segs.slice(1);
+    return want.length === 0
+      || rest.some((_, i) => want.every((w, j) => rest[i + j] === w));
+  });
+}
+
 // Exact prefix match only: `/deepseek@evil.com/x` and `/deepseekX` are not
 // routes (they used to be one by a naive startsWith(prefix)).
 function routeFor(routes, path) {
@@ -73,9 +100,13 @@ function proxyHeaders(route, headers) {
   return out;
 }
 
-function makeHandler(routes) {
+function makeHandler(routes, block = []) {
   return (req, res) => {
     const url = new URL(req.url, 'http://keyproxy');
+    if (isBlocked(block, url.pathname)) {
+      res.writeHead(403).end();
+      return;
+    }
     const route = routeFor(routes, url.pathname);
     const target = route && targetFor(route, url.pathname, url.search);
     if (!target) {
@@ -157,18 +188,37 @@ function selftest() {
   rejects('a wrong field count', 'A_API_KEY|/a|https://a.test|x-api-key');
   rejects('a bad key name', 'a-key|/a|https://a.test');
   rejects('a non-URL upstream', 'A_API_KEY|/a|not a url');
+  const block = parseBlock('/deepseek/tools');
+  for (const p of ['/deepseek/v1/tools/search', '/deepseek/v1/tools', '/deepseek//v1/tools/fetch',
+    '/DeepSeek/V1/Tools/search', '/deepseek/v1/tools/%73earch', '/deepseek/v1%2Ftools/search', '/deepseek/tools/search',
+    '/deepseek/x/v1/tools/search', '/deepseek/a/b/tools/fetch', '/deepseek/%zz']) {
+    assert(`blocked: ${p}`, isBlocked(block, p));
+  }
+  for (const p of ['/deepseek/chat/completions', '/deepseek/v1/chat/completions', '/deepseek/v1/toolsX',
+    '/openai/v1/tools/search', '/tools/search']) {
+    assert(`not blocked: ${p}`, !isBlocked(block, p));
+  }
+  assert('multi-segment entry needs them in a row',
+    isBlocked(['/deepseek/v1/tools'], '/deepseek/x/v1/tools/search') && !isBlocked(['/deepseek/v1/tools'], '/deepseek/v1/x/tools'));
+  assert('route-only entry blocks the whole route', isBlocked(['/deepseek'], '/deepseek/chat/completions'));
+  assert('no blocklist: nothing blocked', !isBlocked([], '/deepseek/v1/tools/search'));
+  let blockMsg = '';
+  try { parseBlock('/deepseek/../x'); } catch (e) { blockMsg = e.message; }
+  assert('parseBlock rejects /..', blockMsg.startsWith('invalid block'));
   const start = spawnSync(process.execPath, [fileURLToPath(import.meta.url)],
     { env: { KEYPROXY_ROUTES: 'A_API_KEY|/a|http://a.test' }, encoding: 'utf8' });
   assert('bad table: startup exits non-zero with the reason',
     start.status !== 0 && start.stderr.includes('invalid route'));
 
-  const server = http.createServer(makeHandler(routes));
+  const server = http.createServer(makeHandler(routes, block));
   server.listen(0, '127.0.0.1', async () => {
     const base = `http://127.0.0.1:${server.address().port}`;
     for (const path of ['/evil.com/x', '/deepseek@evil.com/x', '/deepseekX']) {
       const code = await fetch(base + path).then((r) => r.status);
       assert(`GET ${path} → 404`, code === 404);
     }
+    const blocked = await fetch(base + '/deepseek/v1/tools/search', { method: 'POST' }).then((r) => r.status);
+    assert('POST /deepseek/v1/tools/search → 403 (never forwarded)', blocked === 403);
     server.close();
     process.exit(bad ? 1 : 0);
   });
@@ -177,8 +227,11 @@ function selftest() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv.includes('--selftest')) selftest();
   else {
-    let routes;
-    try { routes = activeRoutes(process.env.KEYPROXY_ROUTES || ''); } catch (e) { console.error(e.message); process.exit(1); }
-    http.createServer(makeHandler(routes)).listen(8787, '0.0.0.0', () => console.log('keyproxy listening'));
+    let routes, block;
+    try {
+      routes = activeRoutes(process.env.KEYPROXY_ROUTES || '');
+      block = parseBlock(process.env.KEYPROXY_BLOCK || '');
+    } catch (e) { console.error(e.message); process.exit(1); }
+    http.createServer(makeHandler(routes, block)).listen(8787, '0.0.0.0', () => console.log('keyproxy listening'));
   }
 }

@@ -138,7 +138,7 @@ cat > "$STUB2/docker" <<'STUB'
 case "$1" in
   run)
     if [ "${2:-}" = "-d" ]; then
-      printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; printf '%s\n' "${KEYPROXY_ROUTES:-}" > "$ARGS_LOG.routes"; exit 0
+      printf '%s\n' "$@" >> "$ARGS_LOG.proxy"; printf '%s\n' "${KEYPROXY_ROUTES:-}" > "$ARGS_LOG.routes"; printf '%s\n' "${KEYPROXY_BLOCK:-}" > "$ARGS_LOG.block"; exit 0
     fi ;;
   network|rm|ps) exit 0 ;;
   logs) echo "keyproxy listening"; exit 0 ;;
@@ -464,9 +464,18 @@ check "route table: a key not loaded is not given to the sidecar" \
   bash -c '! grep -qx DEEPSEEK_API_KEY "$0"' "$TMP/docker.args.proxy"
 
 # A route table exported in the calling shell must never reach the sidecar.
-( cd "$PK/run" && printf 'n\n' | KEYPROXY_ROUTES='EVIL_API_KEY|/evil|https://evil.test' TAVILY_API_KEY=tv \
+( cd "$PK/run" && printf 'n\n' | KEYPROXY_ROUTES='EVIL_API_KEY|/evil|https://evil.test' KEYPROXY_BLOCK=/evil TAVILY_API_KEY=tv \
   PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$PK/repo/pi.sh" ) >/dev/null 2>&1
 check "route table: shell KEYPROXY_ROUTES ignored" bash -c '! grep -q evil "$0"' "$TMP/docker.args.routes"
+check "blocklist: empty by default, shell KEYPROXY_BLOCK never trusted" bash -c '[ -z "$(cat "$0")" ]' "$TMP/docker.args.block"
+
+# KEYPROXY_BLOCK_PATHS in pi.conf (install.sh's DeepSeek tools option) reaches the sidecar.
+printf 'KEYPROXY_BLOCK_PATHS=(/deepseek/tools /openai/x)\n' >> "$PK/repo/pi.conf"
+run_key tv
+check "blocklist: pi.conf paths reach the sidecar" grep -qx '/deepseek/tools;/openai/x' "$TMP/docker.args.block"
+check "sidecar receives -e KEYPROXY_BLOCK" \
+  bash -c 'grep -A1 -x -- "-e" "$0" | grep -qx KEYPROXY_BLOCK' "$TMP/docker.args.proxy"
+sed -i.bak '/^KEYPROXY_BLOCK_PATHS=/d' "$PK/repo/pi.conf"; rm -f "$PK/repo/pi.conf.bak"
 
 # Built-in key with an x-api-key client (Anthropic): proxied like the others.
 sed -i.bak 's/^API_KEYS=(TAVILY_API_KEY)/API_KEYS=(ANTHROPIC_API_KEY)/' "$PK/repo/pi.conf"
