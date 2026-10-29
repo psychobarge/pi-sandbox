@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Added
+- `pi-ask-user` is now a default extension (`config/settings.json`). Only
+  fresh installs get it: an existing `pi-agent-home` volume keeps its
+  settings, so run `!pi install npm:pi-ask-user` there.
+
 ## [1.2.0] — 2026-10-26
 
 ### Added

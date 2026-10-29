@@ -10,6 +10,7 @@
     "npm:@dietrichgebert/ponytail",
     "npm:pi-web-access",
     "npm:@narumitw/pi-plan-mode",
-    "npm:pi-ask-mode"
+    "npm:pi-ask-mode",
+    "npm:pi-ask-user"
   ]
 }
