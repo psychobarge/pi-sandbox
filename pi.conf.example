@@ -44,6 +44,11 @@ IMAGE="pi-sandbox"
 VOLUME="pi-agent-home"
 # rtk data (history / `rtk gain` stats) — named volume, same isolation as VOLUME
 RTK_VOLUME="rtk-data"
+# Keep pi's sessions in a host folder instead of the volume, so host tools
+# (e.g. pi-sessions) can read them. The first launch copies the volume's
+# sessions there (the volume keeps them as sessions-moved-to-host).
+# Unset = sessions stay in the volume.
+# SESSIONS_DIR="$HOME/.pi/agent/sessions"
 # Container-side mount point for the NON-confined fallback only
 # (confined launches mount the folder at its real host path).
 WORKSPACE="/workspace"

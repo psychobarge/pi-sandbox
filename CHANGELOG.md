@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Added
+- Optional `SESSIONS_DIR` in `pi.conf`: pi's sessions are kept in that host
+  folder (bind-mounted over the volume's `sessions/`) so Mac tools can read
+  them. On the first launch with an empty folder, the volume's sessions are
+  copied there and kept in the volume as `sessions-moved-to-host`. The copy is
+  refused while another pi session is running, and the folder is refused if it
+  is pi-sandbox, inside it or contains it. Unset: no change.
+
 ## [1.3.0] — 2026-10-29
 
 ### Added

@@ -54,6 +54,23 @@ A key exported in your shell **overrides the Keychain** for that launch. This is
 not safe: the key sits in plain text in your shell config or history, readable by
 any program on your Mac. **Use the Keychain to keep your keys secure.**
 
+### Sessions on your Mac
+
+Sessions live in the `pi-agent-home` volume, where Mac tools cannot read them.
+To keep them in a Mac folder instead (for a session browser such as
+[pi-sessions](https://github.com/psychobarge/pi-sessions)), set in `pi.conf`:
+
+```bash
+SESSIONS_DIR="$HOME/.pi/agent/sessions"
+```
+
+On the next launch, with no other pi session running, the sessions already in
+the volume are copied there. The volume keeps the originals in
+`sessions-moved-to-host`. Once you have checked the copy, you can delete that
+backup:
+`docker run --rm -v pi-agent-home:/a --entrypoint rm pi-sandbox -rf /a/sessions-moved-to-host`.
+The folder must not be pi-sandbox, inside it, or contain it.
+
 ### Supported keys
 
 For these keys, add the name to `API_KEYS` and store the key in the Keychain
@@ -110,7 +127,8 @@ image in the background; relaunch to use it. To update right away:
 ## How it works
 
 - **Isolation** — only the folders in `ALLOWED` are mounted, at their real path.
-  pi's data lives in Docker volumes, never in your host `~/.pi`.
+  pi's data lives in Docker volumes, never in your host `~/.pi` (except the
+  sessions, if you set `SESSIONS_DIR`).
 - **Keys stay outside** — the container only sees the value `proxy`. A small
   sidecar ([`proxy/keyproxy.mjs`](proxy/keyproxy.mjs)) adds the real key to
   requests sent to the [supported providers](#supported-keys). The agent can
@@ -133,6 +151,10 @@ image in the background; relaunch to use it. To update right away:
   model API (account or billing endpoints on the same host, for example).
   `KEYPROXY_BLOCK_PATHS` in `pi.conf` refuses chosen paths (see
   `pi.conf.example`).
+- **`SESSIONS_DIR` is writable by the agent.** Nothing in it runs on your Mac,
+  but a Mac tool that reads the session files reads what the agent wrote,
+  including each session's working directory. Treat those files as untrusted
+  input.
 - **pi's config persists and the agent can rewrite it.** The `pi-agent-home`
   volume (`settings.json`, `extensions/`, `web-search.json`…) is writable from
   the container and survives across sessions. A compromised agent (prompt

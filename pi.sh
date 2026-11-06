@@ -211,6 +211,37 @@ else
   "$UPDATER" || true
 fi
 
+# ====== sessions on the host (optional) ======
+# SESSIONS_DIR mounts a host folder over the volume's sessions/, so host tools
+# (pi-sessions…) can read them. It holds session files only and nothing in it
+# runs on the host; the agent can write there, as it can in the volume.
+SESSIONS_ARGS=()
+if [ -n "${SESSIONS_DIR:-}" ]; then
+  SESSIONS_DIR="${SESSIONS_DIR/#\~/$HOME}"
+  SESSIONS_DIR="${SESSIONS_DIR%/}"
+  # resolve through the parent: the folder may not exist yet (/var → /private/var)
+  parent="$(cd "$(dirname "$SESSIONS_DIR")" 2>/dev/null && pwd -P)" || parent="$(dirname "$SESSIONS_DIR")"
+  holds_repo "$parent/$(basename "$SESSIONS_DIR")" && { echo "❌ SESSIONS_DIR must not be pi-sandbox, inside it, or contain it"; exit 1; }
+  mkdir -p "$SESSIONS_DIR" || { log_error "cannot create SESSIONS_DIR $SESSIONS_DIR"; echo "❌ cannot create $SESSIONS_DIR"; exit 1; }
+  # Empty host folder (first use): bring over the sessions still in the volume.
+  # The volume keeps them, renamed sessions-moved-to-host, so a failed copy loses
+  # nothing; once renamed, the volume's sessions/ is only the empty mount point.
+  if [ -z "$(ls -A "$SESSIONS_DIR")" ]; then
+    # a running pi would keep appending to the folder being renamed
+    # (keyproxy sidecars share the image; a stale one must not block this)
+    if docker ps --filter "ancestor=${IMAGE}" --format '{{.Names}}' 2>/dev/null | grep -qv '^pi-keyproxy-'; then
+      echo "❌ close the running pi sessions first: their sessions are being moved to $SESSIONS_DIR"
+      exit 1
+    fi
+    docker run --rm --entrypoint sh -v "${VOLUME}:/from" -v "$SESSIONS_DIR:/to" "${IMAGE}" -c '
+      [ -n "$(ls -A /from/sessions 2>/dev/null)" ] || exit 0
+      [ ! -e /from/sessions-moved-to-host ] || { echo "sessions-moved-to-host already exists in the volume" >&2; exit 1; }
+      cp -a /from/sessions/. /to/ && mv /from/sessions /from/sessions-moved-to-host
+    ' || { log_error "copying sessions to $SESSIONS_DIR failed"; echo "❌ copying the volume's sessions to $SESSIONS_DIR failed"; exit 1; }
+  fi
+  SESSIONS_ARGS=(-v "$SESSIONS_DIR:/root/.pi/agent/sessions")
+fi
+
 # ====== keyproxy sidecar ======
 # Private network per session, fixed alias "keyproxy" so config/models.json can
 # hardcode http://keyproxy:8787/…; two sessions can neither share nor reach
@@ -274,6 +305,7 @@ docker run --rm -it \
   -v "${VOLUME}:/root/.pi/agent" \
   -e XDG_CACHE_HOME=/root/.pi/agent/cache \
   ${MODELS_ARGS[@]+"${MODELS_ARGS[@]}"} \
+  ${SESSIONS_ARGS[@]+"${SESSIONS_ARGS[@]}"} \
   -v "${RTK_VOLUME}:/root/.local/share/rtk" \
   ${ARGS[@]+"${ARGS[@]}"} \
   "${WORKDIR_ARGS[@]}" \

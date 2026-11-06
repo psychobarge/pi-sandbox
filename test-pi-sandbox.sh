@@ -575,6 +575,33 @@ check "~ in ALLOWED: confines like \$HOME" grep -qF "Confined to: $H7/proj" "$TM
 ( cd "$TMP/run0" && printf 'n\n' | HOME="$H7" PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P7/pi.sh" ) >"$TMP/pi7b.out" 2>&1
 check "~ in ALLOWED: fallback mount finds the folder" bash -c '! grep -q "folder not found" "$0"' "$TMP/pi7b.out"
 
+# ===== SESSIONS_DIR (pi.sh) ================================================
+# Sessions on the host: mounted over the volume's sessions/, copied from the
+# volume only while the host folder is empty, never inside the repo.
+P8="$TMP/pi8"; S8="$TMP/sess8"; A8="$TMP/allowed8/proj"; mkdir -p "$P8" "$A8"
+cp "$SRC/pi.sh" "$P8/"; cp "$P/pi.conf" "$P8/pi.conf"
+printf 'ALLOWED=("%s")\nSESSIONS_DIR="%s/"\n' "$A8" "$S8" >> "$P8/pi.conf"
+printf '#!/bin/sh\nexit 0\n' > "$P8/update-pi-sandbox.sh"; chmod +x "$P8/update-pi-sandbox.sh"
+run_pi8() { ( cd "$A8" && printf 'n\n' | PATH="$STUB2:$PATH" ARGS_LOG="$TMP/docker.args" "$P8/pi.sh" ) >"$TMP/pi8.out" 2>&1; }
+: > "$TMP/docker.args"
+run_pi8
+check "SESSIONS_DIR: created on the host" test -d "$S8"
+check "SESSIONS_DIR: mounted over the volume's sessions" \
+  grep -qxF "$S8:/root/.pi/agent/sessions" "$TMP/docker.args"
+check "SESSIONS_DIR: empty folder triggers the copy from the volume" \
+  grep -qxF "$S8:/to" "$TMP/docker.args"
+touch "$S8/--some-project--"
+: > "$TMP/docker.args"
+run_pi8
+check "SESSIONS_DIR: no copy once the folder has sessions" \
+  bash -c '! grep -qxF "$1" "$2"' _ "$S8:/to" "$TMP/docker.args"
+printf 'SESSIONS_DIR="%s/sessions"\n' "$P8" >> "$P8/pi.conf"
+: > "$TMP/docker.args"
+run_pi8
+check "SESSIONS_DIR inside the repo is refused" grep -qF "must not be pi-sandbox" "$TMP/pi8.out"
+check "SESSIONS_DIR inside the repo: pi not started" \
+  bash -c '! grep -qF ":/root/.pi/agent/sessions" "$1"' _ "$TMP/docker.args"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
